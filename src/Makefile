@@ -1,9 +1,14 @@
+BUILDDIR=../build
+
 all: mk-som mk-bsom
 
-mk-som:
+build:
+	mkdir -p $(BUILDDIR)
+
+mk-som: build
 	make -C som/ all
 
-mk-bsom:
+mk-bsom: build
 	make -C bsom/ all
 
 clean:

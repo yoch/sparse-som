@@ -2,27 +2,30 @@ TARGET=sparse-bsom
 CXX=g++
 CXXFLAGS=--std=c++11 -Wall -Wextra
 SRC=../data.cpp ../sparse_vec.cpp ../bsom.cpp main.cpp
+BUILDDIR=../../build
+DATADIR=../../datasets
+
 
 all: bsom omp
 
 
 bsom:
-	$(CXX) $(CXXFLAGS) -Wno-unknown-pragmas -O2 -s $(SRC) -o ../$(TARGET)	
+	$(CXX) $(CXXFLAGS) -Wno-unknown-pragmas -O2 -s $(SRC) -o $(BUILDDIR)/$(TARGET)	
 
 omp:
-	$(CXX) $(CXXFLAGS) -O2 -s -fopenmp $(SRC) -o ../$(TARGET)-omp
+	$(CXX) $(CXXFLAGS) -O2 -s -fopenmp $(SRC) -o $(BUILDDIR)/$(TARGET)-omp
 
 #-mpc32 -march=native -mtune=native -ffast-math
 
 prof:
-	$(CXX) $(CXXFLAGS) -Og -pg -fopenmp $(SRC) -o ../$(TARGET)-omp-prof
+	$(CXX) $(CXXFLAGS) -Og -pg -fopenmp $(SRC) -o $(BUILDDIR)/$(TARGET)-omp-prof
 
 # works well with -march=native
 pgo:
-	mkdir -p prof
-	$(CXX) $(CXXFLAGS) -O2  -fopenmp -march=native -mpc64 -fprofile-generate=./prof $(SRC) -o ../$(TARGET)-prof
-	../$(TARGET)-prof -y 15 -x 20 -i ../datasets/libsvm/news20.scale
-	$(CXX) $(CXXFLAGS) -O2  -fopenmp -march=native -mpc64 -s -fprofile-use=./prof -fprofile-correction $(SRC) -o ../$(TARGET)-pgo
+	mkdir -p $(BUILDDIR)/prof
+	$(CXX) $(CXXFLAGS) -O2 -fopenmp -march=native -mpc64 -fprofile-generate=$(BUILDDIR)/prof $(SRC) -o $(BUILDDIR)/$(TARGET)-prof
+	$(BUILDDIR)/$(TARGET)-prof -q -y 15 -x 20 -i $(DATADIR)/news20.scale
+	$(CXX) $(CXXFLAGS) -O2 -fopenmp -march=native -mpc64 -s -fprofile-use=$(BUILDDIR)/prof -fprofile-correction $(SRC) -o $(BUILDDIR)/$(TARGET)-pgo
 
 clean:
 	rm -f *.o
