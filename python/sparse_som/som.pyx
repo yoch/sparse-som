@@ -1,5 +1,5 @@
 # distutils: language = c++
-# distutils: sources = ../../src/bsom.cpp, ../../src/som.cpp, ../../src/sparse_vec.cpp
+# distutils: sources = lib/bsom.cpp, lib/som.cpp, lib/sparse_vec.cpp
 
 from libc.stdint cimport uint32_t, int32_t
 from libc.stdlib cimport malloc, free
@@ -15,7 +15,7 @@ import scipy.sparse
 
 
 
-cdef extern from "../../src/sparse_vec.h":
+cdef extern from "lib/sparse_vec.h":
     cdef cppclass cell:
         uint32_t idx
         float val
@@ -80,7 +80,7 @@ cdef sparse_matrix_from_scipy(vector[sparse_vec]& m, sm):
 
 
 
-cdef extern from "../../src/som.h" namespace "som":
+cdef extern from "lib/som.h" namespace "som":
     cpdef enum cooling:
         LINEAR = 0
         EXPONENTIAL = 1

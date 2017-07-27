@@ -15,10 +15,12 @@ else:
 
 som_ext = [
             Extension('sparse_som.som',
-                sources=['sparse_som/som.pyx', '../src/bsom.cpp', '../src/som.cpp'],
+                sources=['sparse_som/som.pyx',
+                         'sparse_som/lib/som.cpp',
+                         'sparse_som/lib/bsom.cpp'],
                 extra_compile_args=extra_compile_args,
                 extra_link_args=extra_link_args,
-                include_dirs = [np.get_include()],
+                include_dirs = ['sparse_som/lib/', np.get_include()],
                 language='c++')
 ]
 
@@ -26,7 +28,7 @@ som_ext = [
 setup(
   name = 'sparse_som',
   packages = ['sparse_som'],
-  version = '0.4',
+  version = '0.4.2',
   description = 'Self-Organizing Maps for sparse inputs in python',
   author = 'J. Melka',
   url = 'https://gitlab.com/yoch/sparse-som',
