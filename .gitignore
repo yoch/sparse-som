@@ -1,0 +1,4 @@
+/build
+/python/build
+/python/doc
+/python/sparse_som/__pycache__

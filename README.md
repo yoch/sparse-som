@@ -95,7 +95,7 @@ N = X.shape[1]  # Nb. features (vectors dimension)
 
 # setup SOM network
 som = Som(H, W, N, topology.HEXA) # , verbose=True
-print(som.codebook.shape)
+print(som.nrows, som.ncols, som.dim)
 
 # reinit the codebook (not needed)
 som.codebook = np.random.rand(H, W, N).\
@@ -103,6 +103,10 @@ som.codebook = np.random.rand(H, W, N).\
 
 # train the SOM
 som.train(X)
+
+# get bmus for the data
+bmus = som.bmus(X)
+
 
 ################ Use classifier ################
 
