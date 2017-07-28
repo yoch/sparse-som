@@ -8,7 +8,7 @@ Efficient Implementation of Self-Organizing Map for Sparse Input Data.
 - Support both online and batch SOM algorithms.
 - Parallel batch implementation (OpenMP).
 - OS independent.
-- Pyhton 3 support.
+- [Pyhton](https://pypi.python.org/pypi?:action=display&name=sparse-som) support.
 
 ## Build
 
@@ -35,22 +35,21 @@ To use the *online* version :
 ```
 Usage: sparse-som
         -i infile - input file at libsvm sparse format
-        -y nrow - number of rows in the codebook
-        -x ncol - number of columns in the codebook
+        -y nrows  - number of rows in the codebook
+        -x ncols  - number of columns in the codebook
         [ -u ] - one based column indices (default is zero based)
         [ -N ] - normalize the input vectors
         [ -l codebook ]   - load codebook from binary file
         [ -o|O codebook ] - output codebook to filename (o:binary, O:text)
         [ -c|C classes ]  - output classification (c:without counts, C:with counts)
-        [ -t tmax | -T epochs ] - number of training iterations (epoch=nb. of samples)
         [ -n neighborhood ] - neighborhood topology: 4=circ, 6=hexa, 8=rect (default 8)
+        [ -t tmax | -T epochs ]   - number of training iterations (epoch=nb. of samples)
         [ -r radius0 -R radiusN ] - radius at start and end (default r=(x+y)/2, R=0.5)
         [ -a alpha0  -A  alphaN ] - learning rate at start and end (default a=0.5, A=1.e-37)
         [ -H radiusCool ] - radius cooling: 0=linear, 1=exponential (default 0)
-        [ -h  alphaCool ] -  alpha cooling: 0=linear, 1=exponential (default 0)
-        [ -s stdCoeff ] - sigma = radius * coeff (default 0.3)
+        [ -h  alphaCool ] - alpha cooling: 0=linear, 1=exponential (default 0)
+        [ -s stdCoeff ]   - sigma = radius * coeff (default 0.3)
         [ -q ] - quiet
-
 ```
 
 #### sparse-bsom
@@ -60,18 +59,18 @@ To use the *batch* version :
 ```
 Usage: sparse-bsom
         -i infile - input file at libsvm sparse format
-        -y nrow - number of rows in the codebook
-        -x ncol - number of columns in the codebook
+        -y nrows  - number of rows in the codebook
+        -x ncols  - number of columns in the codebook
         [ -u ] - one based column indices (default is zero based)
         [ -N ] - normalize the input vectors
         [ -l codebook ]   - load codebook from binary file
         [ -o|O codebook ] - output codebook to filename (o:binary, O:text)
         [ -c|C classes ]  - output classification (c:without counts, C:with counts)
-        [ -T epochs ] - number of epochs (default 10)
         [ -n neighborhood ] - neighborhood topology: 4=circ, 6=hexa, 8=rect (default 8)
+        [ -T epochs ] - number of epochs (default 10)
         [ -r radius0 -R radiusN ] - radius at start and end (default r=(x+y)/2, R=0.5)
         [ -H radiusCool ] - radius cooling: 0=linear, 1=exponential (default 0)
-        [ -s stdCoeff ] - sigma = radius * coeff (default 0.3)
+        [ -s stdCoeff ]   - sigma = radius * coeff (default 0.3)
         [ -q ] - quiet
 ```
 
@@ -136,11 +135,28 @@ print(classification_report(dataset.target, y))
 
 ## Documentation
 
-#### Python documentation
+### CLI
+
+#### Files Format
+
+Input files must be at LIBSVM format.
+
+```
+<label> <index1>:<value1> <index2>:<value2> ...
+.
+.
+.
+```
+
+Each line contains an instance and is ended by a '\n' character. The pair `<index>:<value>` gives a feature (attribute) value: `<index>` is an integer starting from 0 and `<value>` is a real number. Indices must be in ASCENDING order. Labels in the file are only used for network calibration. If they are unknown, just fill the first column with any numbers.
+
+
+### Python documentation
 
 The python documentation can be found at: http://sparse-som.readthedocs.io/en/latest/
 
-#### API
+
+### API
 
 ...
 

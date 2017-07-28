@@ -16,20 +16,20 @@ static void usage(const char* name)
 {
     cerr << "Usage: " << name << endl
         << "\t-i infile - input file at libsvm sparse format" << endl
+        << "\t-y nrows  - number of rows in the codebook" << endl
+        << "\t-x ncols  - number of columns in the codebook" << endl
         << "\t[ -u ] - one based column indices (default is zero based)" << endl
-        << "\t-y nlig - number of lines in the codebook" << endl
-        << "\t-x ncol - number of columns in the codebook" << endl
+        << "\t[ -N ] - normalize the input vectors" << endl
         << "\t[ -l codebook ]   - load codebook from binary file" << endl
         << "\t[ -o|O codebook ] - output codebook to filename (o:binary, O:text)" << endl
         << "\t[ -c|C classes ]  - output classification (c:without counts, C:with counts)" << endl
-        << "\t[ -N ] - normalize the input vectors" << endl
-        << "\t[ -t tmax | -T epochs ] - number of training iterations (epoch=nb. of samples)" << endl
         << "\t[ -n neighborhood ] - neighborhood topology: 4=circ, 6=hexa, 8=rect (default 8)" << endl
+        << "\t[ -t tmax | -T epochs ]   - number of training iterations (epoch=nb. of samples)" << endl
         << "\t[ -r radius0 -R radiusN ] - radius at start and end (default r=(x+y)/2, R=0.5)" << endl
         << "\t[ -a alpha0  -A  alphaN ] - learning rate at start and end (default a=0.5, A=1.e-37)" << endl
         << "\t[ -H radiusCool ] - radius cooling: 0=linear, 1=exponential (default 0)" << endl
-        << "\t[ -h  alphaCool ] -  alpha cooling: 0=linear, 1=exponential (default 0)" << endl
-        << "\t[ -s stdCoeff ] - sigma = radius * coeff (default 0.3)" << endl
+        << "\t[ -h  alphaCool ] - alpha cooling: 0=linear, 1=exponential (default 0)" << endl
+        << "\t[ -s stdCoeff ]   - sigma = radius * coeff (default 0.3)" << endl
         << "\t[ -q ] - quiet" << endl;
     exit(-1);
 }
