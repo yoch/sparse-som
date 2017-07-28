@@ -12,8 +12,7 @@ som:
 	$(CXX) $(CXXFLAGS) -Wno-unknown-pragmas -O2 -s $(SRC) -o $(BUILDDIR)/$(TARGET)
 
 # (enabling OpenMP is almost useless for now)
-omp:
-	$(CXX) $(CXXFLAGS) -O2 -s -fopenmp $(SRC) -o $(BUILDDIR)/$(TARGET)-omp
+#	$(CXX) $(CXXFLAGS) -O2 -s -fopenmp $(SRC) -o $(BUILDDIR)/$(TARGET)-omp
 
 # works well with -march=native
 pgo:

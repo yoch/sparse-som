@@ -6,14 +6,12 @@ BUILDDIR=../../build
 DATADIR=../../datasets
 
 
-all: bsom omp
+all: bsom
 
 
 bsom:
-	$(CXX) $(CXXFLAGS) -Wno-unknown-pragmas -O2 -s $(SRC) -o $(BUILDDIR)/$(TARGET)	
-
-omp:
-	$(CXX) $(CXXFLAGS) -O2 -s -fopenmp $(SRC) -o $(BUILDDIR)/$(TARGET)-omp
+#	$(CXX) $(CXXFLAGS) -Wno-unknown-pragmas -O2 -s $(SRC) -o $(BUILDDIR)/$(TARGET)	
+	$(CXX) $(CXXFLAGS) -O2 -s -fopenmp $(SRC) -o $(BUILDDIR)/$(TARGET)
 
 #-mpc32 -march=native -mtune=native -ffast-math
 
