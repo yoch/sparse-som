@@ -20,6 +20,10 @@ GCC is reccomended, but you can use another compiler if you want. C++11 support 
 
 ...
 
+#### Python
+
+To install the python version, simply run `pip install sparse-som`.
+
 ## Usage
 
 ### CLI
@@ -124,4 +128,11 @@ print(classification_report(dataset.target, y))
 
 ## Documentation
 
+#### Python documentation
+
+The python documentation can be found at: http://sparse-som.readthedocs.io/en/latest/
+
+#### API
+
 ...
+
