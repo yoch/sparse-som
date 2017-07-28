@@ -33,9 +33,9 @@ To install the python version, simply run `pip install sparse-som`.
 To use the *online* version :
 
 ```
-Usage: ./sparse-som
+Usage: sparse-som
         -i infile - input file at libsvm sparse format
-        -y nlig - number of lines in the codebook
+        -y nrow - number of rows in the codebook
         -x ncol - number of columns in the codebook
         [ -u ] - one based column indices (default is zero based)
         [ -N ] - normalize the input vectors
@@ -58,9 +58,9 @@ Usage: ./sparse-som
 To use the *batch* version :
 
 ```
-Usage: ./sparse-bsom
+Usage: sparse-bsom
         -i infile - input file at libsvm sparse format
-        -y nlig - number of lines in the codebook
+        -y nrow - number of rows in the codebook
         -x ncol - number of columns in the codebook
         [ -u ] - one based column indices (default is zero based)
         [ -N ] - normalize the input vectors
@@ -74,6 +74,14 @@ Usage: ./sparse-bsom
         [ -s stdCoeff ] - sigma = radius * coeff (default 0.3)
         [ -q ] - quiet
 ```
+
+To control the number of threads used by OpenMP, set to `OMP_NUM_THREADS` variable to the desired value, for example :
+
+```
+OMP_NUM_THREADS=4 sparse-bsom ...
+```
+
+If undefined one thread per CPU is used.
 
 ### Python
 
