@@ -1,4 +1,4 @@
 cython
 numpy
 scipy
-../python/
+sparse-som
