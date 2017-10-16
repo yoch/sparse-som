@@ -12,13 +12,17 @@ Efficient Implementation of Self-Organizing Map for Sparse Input Data.
 
 ## Build
 
-The simplest way to build the cli tools from the main directory : `cd src && make all`. After the compilation terminates, the resulting executables may be found in the `build` directory.
+The simplest way to build the cli tools from the main directory : `cd src && make all`.
+After the compilation terminates, the resulting executables may be found in the `build` directory.
 
 GCC is reccomended, but you can use another compiler if you want. C++11 support is required.
+OpenMP support is required to take advantage of parallelism (sparse-bsom).
 
 ## Install
 
-...
+####
+
+No install required.
 
 #### Python
 
@@ -132,6 +136,8 @@ y = cls.predict(X)
 
 print(classification_report(dataset.target, y))
 ```
+
+Other examples are available in the `python/examples` directory.
 
 ## Documentation
 
