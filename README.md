@@ -2,6 +2,10 @@
 
 Efficient Implementation of Self-Organizing Map for Sparse Input Data.
 
+This program uses an algorithm especially intended for sparse data, 
+which much faster than the classical one on very sparse datasets
+(time-complexity depend to non-zero values only).
+
 #### Main features
 
 - Highly optimized for sparse data (LIBSVM format).
@@ -18,6 +22,7 @@ After the compilation terminates, the resulting executables may be found in the 
 GCC is reccomended, but you can use another compiler if you want. C++11 support is required.
 OpenMP support is required to take advantage of parallelism (sparse-bsom).
 
+
 ## Install
 
 ####
@@ -27,6 +32,7 @@ No install required.
 #### Python
 
 To install the python version, simply run `pip install sparse-som`.
+
 
 ## Usage
 
@@ -139,6 +145,7 @@ print(classification_report(dataset.target, y))
 
 Other examples are available in the `python/examples` directory.
 
+
 ## Documentation
 
 ### CLI
@@ -163,6 +170,11 @@ The python documentation can be found at: http://sparse-som.readthedocs.io/en/la
 
 
 ### API
+
+The C++ API is not public yet, because things still may change.
+
+
+## How to cite this work
 
 ...
 
