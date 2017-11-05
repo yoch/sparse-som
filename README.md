@@ -12,7 +12,7 @@ which much faster than the classical one on very sparse datasets
 - Support both online and batch SOM algorithms.
 - Parallel batch implementation (OpenMP).
 - OS independent.
-- [Pyhton](https://pypi.python.org/pypi?:action=display&name=sparse-som) support.
+- [Python](https://pypi.python.org/pypi?:action=display&name=sparse-som) support.
 
 ## Build
 
