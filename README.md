@@ -176,5 +176,21 @@ The C++ API is not public yet, because things still may change.
 
 ## How to cite this work
 
-...
+```
+@InProceedings{melka-mariage:ijcci17,
+  author={Melka, Josu{\'e} and Mariage, Jean-Jacques},
+  title={Efficient Implementation of Self-Organizing Map for Sparse Input Data},
+  booktitle={Proceedings of the 9th International Joint Conference on Computational Intelligence: IJCCI},
+  volume={1},
+  month={November},
+  year={2017},
+  address={Funchal, Madeira, Portugal},
+  pages={54-63},
+  publisher={SciTePress},
+  organization={INSTICC},
+  doi={10.5220/0006499500540063},
+  isbn={978-989-758-274-5},
+  url={http://www.ai.univ-paris8.fr/~jmelka/IJCCI_2017_20.pdf}
+}
+```
 
