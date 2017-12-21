@@ -42,10 +42,10 @@ else:
 setup(
   name = 'sparse_som',
   packages = ['sparse_som'],
-  version = '0.4.3',
+  version = '0.4.4',
   description = 'Self-Organizing Maps for sparse inputs in python',
   author = 'J. Melka',
-  url = 'https://gitlab.com/yoch/sparse-som',
+  url = 'https://github.com/yoch/sparse-som',
   ext_modules = extensions,
   cmdclass = {'build_ext': build_ext},
   package_data = {'': ['*.pyx']},
