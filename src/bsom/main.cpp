@@ -3,6 +3,7 @@
 
 
 #include <cstdlib>
+#include <ctime>
 #include <iostream>
 #include <string>
 #include <cassert>
@@ -139,12 +140,14 @@ int main(int argc, char *argv[])
             cout.flush();
         }
 
+        clock_t tm1 = clock();
         dataSet = loadSparseData(filename, zerobased ? 0 : 1);
+        clock_t tm2 = clock();
         ncols = dataSet.nfeatures();
 
         if (verbose)
         {
-            cout << "OK" << endl;
+            cout << "OK (" << (float)(tm2 - tm1) / CLOCKS_PER_SEC << "s)" << endl;
             cout << "  " << dataSet.nsamples() << " vectors read" << endl;
             cout << "  " << ncols << " features" << endl;
         }

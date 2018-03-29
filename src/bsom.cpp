@@ -266,11 +266,17 @@ void BSom::trainOneEpoch(const vector<sparse_vec>& data, size_t t, size_t tmax,
 void BSom::train(const vector<sparse_vec>& data, size_t tmax,
            float radius0, float radiusN, float stdCoef, cooling rcool)
 {
-    clock_t tm1 = clock();
+    double tm = 0.;
 
     if (m_verbose)
     {
         cout << "Start learning..." << endl;
+
+#if defined(_OPENMP)
+        tm = omp_get_wtime();
+#else
+        tm = (double) clock() / CLOCKS_PER_SEC;
+#endif
     }
 
     size_t * bmus = new size_t[data.size()];
@@ -284,11 +290,15 @@ void BSom::train(const vector<sparse_vec>& data, size_t tmax,
     delete [] bmus;
     delete [] dsts;
 
-    clock_t tm2 = clock();
-
     if (m_verbose)
     {
-        cout << "Finished: elapsed " << (float)(tm2 - tm1) / CLOCKS_PER_SEC << "s" << endl;
+#if defined(_OPENMP)
+        tm = omp_get_wtime() - tm;
+#else
+        tm = (double) clock() / CLOCKS_PER_SEC - tm;
+#endif
+
+        cout << "Finished: elapsed " << tm << "s" << endl;
 /*
         getBmus(data, bmus, dsts);
         float Qe = accumulate(dsts, dsts+data.size(), 0.f, [](float acc, float val){ return acc + sqrt(max(val,0.f)); })

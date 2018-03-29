@@ -320,11 +320,17 @@ void Som::train(const std::vector<sparse_vec>& data, size_t tmax,
 {
     NBSTABLES = 0;
 
-    clock_t tm1 = clock();
+    double tm = 0.;
 
     if (m_verbose)
     {
         cout << "Start learning..." << endl;
+
+#if defined(_OPENMP)
+        tm = omp_get_wtime();
+#else
+        tm = (double) clock() / CLOCKS_PER_SEC;
+#endif
     }
 
     // allocate helpers internal arrays
@@ -406,11 +412,15 @@ void Som::train(const std::vector<sparse_vec>& data, size_t tmax,
     delete [] w_coeff;
     delete [] wvprod;
 
-    clock_t tm2 = clock();
-
     if (m_verbose)
     {
-        cout << "Finished: elapsed : " << (double)(tm2 - tm1) / CLOCKS_PER_SEC << "s" << endl;
+#if defined(_OPENMP)
+        tm = omp_get_wtime() - tm;
+#else
+        tm = (double) clock() / CLOCKS_PER_SEC - tm;
+#endif
+
+        cout << "Finished: elapsed : " << tm << "s" << endl;
         cout << "  coeffs rescaled " << NBSTABLES << " times" << endl;
 /*
         // get all BMUs
