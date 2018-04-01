@@ -130,6 +130,7 @@ void BSom::init()
   }
 }
 
+/*
 void BSom::getBmus(const vector<sparse_vec>& data, size_t * const bmus, float * const dsts) const
 {
     fill_n(bmus, data.size(), 0);
@@ -156,6 +157,51 @@ void BSom::getBmus(const vector<sparse_vec>& data, size_t * const bmus, float * 
             }
         }
     }
+}
+*/
+
+void BSom::getBmus(const vector<sparse_vec>& data, size_t * const bmus, float * const dsts) const
+{
+    //fill_n(bmus, data.size(), 0);
+    //fill_n(dsts, data.size(), FLT_MAX);
+
+    float * W2 = new float[m_height * m_width];
+
+#pragma omp parallel for // shared(data,k)
+    for (size_t k=0; k < m_height * m_width; ++k)
+    {
+        const float * const w = codebook + k * m_dim;
+
+        // precompute {w_k}^2
+        W2[k] = squared(w, m_dim);
+    }
+
+// ensure that two threads don't access shared data (at i index) at a time
+#pragma omp parallel for // shared(data,k)
+
+    for (idx_t i=0; i < data.size(); ++i)
+    {
+        float minDst = FLT_MAX;
+        size_t best = 0;
+
+        for (size_t k=0; k < m_height * m_width; ++k)
+        {
+            const float * const w = codebook + k * m_dim;
+
+            const float dst = euclideanDistanceSq(data[i], w, W2[k]);
+
+            if (dst < minDst)
+            {
+                best = k;
+                minDst = dst;
+            }
+        }
+
+        dsts[i] = minDst;
+        bmus[i] = best;
+    }
+
+    delete [] W2;
 }
 
 void BSom::update(const vector<sparse_vec>& data, const float radius, const float stdCoef, size_t * const bmus)
