@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
             break;
         case 'T':   // epochs
             tcoef = atoi(optarg);
-            assert(tcoef>0);
+            assert(tcoef>=0);
             break;
         case 'n':   // neighborhood
             n = atoi(optarg);

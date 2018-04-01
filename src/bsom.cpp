@@ -48,7 +48,8 @@ BSom::BSom(const std::string& filename, topology topo, bool verbose) :
 
     if (m_verbose)
     {
-        cout << "loading codebook..." << endl;
+        cout << "loading codebook...";
+        cout.flush();
     }
 
     string header;
@@ -59,11 +60,6 @@ BSom::BSom(const std::string& filename, topology topo, bool verbose) :
 
     if (iss.fail())
         throw "bad header in " + filename;
-
-    if (m_verbose)
-    {
-        cout << "  dimensions: " << m_height << "x" << m_width << "x" << m_dim << endl;
-    }
 
     // allocate memory
     codebook = new float[m_height * m_width * m_dim];
@@ -77,7 +73,8 @@ BSom::BSom(const std::string& filename, topology topo, bool verbose) :
 
     if (m_verbose)
     {
-        cout << "OK" << endl;
+        cout << " OK" << endl;
+        cout << "  dimensions: " << m_height << "x" << m_width << "x" << m_dim << endl;
     }
 }
 
@@ -235,7 +232,7 @@ void BSom::trainOneEpoch(const vector<sparse_vec>& data, size_t t, size_t tmax,
                         size_t * const bmus, float * const dsts)
 {
     float radius;
-    const float ratio = ((float)t / tmax);
+    const float ratio = (float)(t-1) / (tmax-1);
 
     switch (rcool) {
     case EXPONENTIAL:
@@ -282,7 +279,7 @@ void BSom::train(const vector<sparse_vec>& data, size_t tmax,
     size_t * bmus = new size_t[data.size()];
     float * dsts = new float[data.size()];
 
-    for (size_t t=0; t<=tmax; ++t)
+    for (size_t t=1; t<=tmax; ++t)
     {
         trainOneEpoch(data, t, tmax, radius0, radiusN, stdCoef, rcool, bmus, dsts);
     }

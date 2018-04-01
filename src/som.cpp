@@ -61,7 +61,8 @@ Som::Som(const std::string& filename, topology topo, bool verbose) :
 
     if (m_verbose)
     {
-        cout << "loading codebook..." << endl;
+        cout << "loading codebook...";
+        cout.flush();
     }
 
     string header;
@@ -72,11 +73,6 @@ Som::Som(const std::string& filename, topology topo, bool verbose) :
 
     if (iss.fail())
         throw "bad header in " + filename;
-
-    if (m_verbose)
-    {
-        cout << "  dimensions: " << m_height << "x" << m_width << "x" << m_dim << endl;
-    }
 
     const size_t sz = m_height * m_width * m_dim;
 
@@ -97,7 +93,8 @@ Som::Som(const std::string& filename, topology topo, bool verbose) :
 
     if (m_verbose)
     {
-        cout << "OK" << endl;
+        cout << " OK" << endl;
+        cout << "  dimensions: " << m_height << "x" << m_width << "x" << m_dim << endl;
     }
 }
 
