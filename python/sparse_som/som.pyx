@@ -91,7 +91,7 @@ cdef extern from "lib/som.h" namespace "som":
         CIRC = 4
 
     cdef cppclass _BSom "som::BSom":
-        _BSom(size_t, size_t, size_t, topology, bool_t)
+        _BSom(size_t, size_t, size_t, topology, int)
         void train(const vector[sparse_vec]&, size_t, float, float, float, cooling)
         void getBmus(const vector[sparse_vec]&, size_t *, float *)
         size_t getx()
@@ -100,7 +100,7 @@ cdef extern from "lib/som.h" namespace "som":
         float * _codebookptr()
 
     cdef cppclass _Som "som::Som":
-        _Som(size_t, size_t, size_t, topology, bool_t)
+        _Som(size_t, size_t, size_t, topology, int)
         void train(const vector[sparse_vec]&, size_t, double, double, double, double, double, cooling, cooling)
         size_t getx()
         size_t gety()
@@ -122,12 +122,12 @@ cdef class BSom:
     :param topol: the network topology
     :type topol: :const:`topology.RECT` or :const:`topology.HEXA`
     :param verbose: verbosity parameter
-    :type verbose: bool
+    :type verbose: int (0..2)
     """
 
     cdef _BSom * c_som
 
-    def __cinit__(self, size_t h, size_t w, size_t d, topology topol=topology.RECT, bool_t verbose=False):
+    def __cinit__(self, size_t h, size_t w, size_t d, topology topol=topology.RECT, int verbose=0):
         self.c_som = new _BSom(h, w, d, topol, verbose)
 
     def __dealloc__(self):
@@ -241,12 +241,12 @@ cdef class Som:
     :param topol: the network topology
     :type topol: :const:`topology.RECT` or :const:`topology.HEXA`
     :param verbose: verbosity parameter
-    :type verbose: bool
+    :type verbose: int (0..2)
     """
 
     cdef _Som * c_som
 
-    def __cinit__(self, size_t h, size_t w, size_t d, topology topol=topology.RECT, bool_t verbose=False):
+    def __cinit__(self, size_t h, size_t w, size_t d, topology topol=topology.RECT, int verbose=0):
         self.c_som = new _Som(h, w, d, topol, verbose)
 
     def __dealloc__(self):

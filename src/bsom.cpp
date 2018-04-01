@@ -25,7 +25,7 @@ using namespace som;
 #define HEX_H 0.8660254037844386
 
 
-BSom::BSom(size_t h, size_t w, size_t d, topology topo, bool verbose) :
+BSom::BSom(size_t h, size_t w, size_t d, topology topo, int verbose) :
     m_height(h),
     m_width(w),
     m_dim(d),
@@ -36,7 +36,7 @@ BSom::BSom(size_t h, size_t w, size_t d, topology topo, bool verbose) :
     init();
 }
 
-BSom::BSom(const std::string& filename, topology topo, bool verbose) :
+BSom::BSom(const std::string& filename, topology topo, int verbose) :
     m_topo(topo),
     m_verbose(verbose)
 {
@@ -46,7 +46,7 @@ BSom::BSom(const std::string& filename, topology topo, bool verbose) :
     if (!myfile.is_open())
         throw "unable to open " + filename;
 
-    if (m_verbose)
+    if (m_verbose > 0)
     {
         cout << "loading codebook...";
         cout.flush();
@@ -71,10 +71,13 @@ BSom::BSom(const std::string& filename, topology topo, bool verbose) :
 
     myfile.close();
 
-    if (m_verbose)
+    if (m_verbose > 0)
     {
         cout << " OK" << endl;
-        cout << "  dimensions: " << m_height << "x" << m_width << "x" << m_dim << endl;
+        if (m_verbose > 1)
+        {
+            cout << "  dimensions: " << m_height << "x" << m_width << "x" << m_dim << endl;
+        }
     }
 }
 
@@ -252,7 +255,7 @@ void BSom::trainOneEpoch(const vector<sparse_vec>& data, size_t t, size_t tmax,
     ///            Update phase
     update(data, radius, stdCoef, bmus);
 
-    if (m_verbose)
+    if (m_verbose > 1)
     {
         float Qe = accumulate(dsts, dsts+data.size(), 0.f, [](float acc, float val){ return acc + sqrt(val); })
                         / data.size();
@@ -265,7 +268,7 @@ void BSom::train(const vector<sparse_vec>& data, size_t tmax,
 {
     double tm = 0.;
 
-    if (m_verbose)
+    if (m_verbose > 0)
     {
         cout << "Start learning..." << endl;
 
@@ -287,7 +290,7 @@ void BSom::train(const vector<sparse_vec>& data, size_t tmax,
     delete [] bmus;
     delete [] dsts;
 
-    if (m_verbose)
+    if (m_verbose > 0)
     {
 #if defined(_OPENMP)
         tm = omp_get_wtime() - tm;

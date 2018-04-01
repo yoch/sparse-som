@@ -15,7 +15,6 @@ inline T squared(T x)
     return x * x;
 }
 
-
 namespace som {
 
 struct bmu
@@ -44,8 +43,8 @@ class Som
 
 public:
 
-    Som(size_t, size_t, size_t, topology=RECT, bool=false);
-    Som(const std::string& filename, topology=RECT, bool=false);
+    Som(size_t, size_t, size_t, topology=RECT, int=0);
+    Som(const std::string& filename, topology=RECT, int=0);
     ~Som();
 
     void train(const std::vector<sparse_vec>&, size_t tmax,
@@ -80,7 +79,7 @@ private:
     size_t m_dim;  // taille du vecteur
 
     topology m_topo;
-	bool m_verbose;
+	int m_verbose;
 
     double* codebook;
     double* squared_sum;
@@ -94,8 +93,8 @@ class BSom
 
 public:
 
-    BSom(size_t, size_t, size_t, topology=RECT, bool=false);
-    BSom(const std::string& filename, topology=RECT, bool=false);
+    BSom(size_t, size_t, size_t, topology=RECT, int=0);
+    BSom(const std::string& filename, topology=RECT, int=0);
     ~BSom();
 
     void train(const std::vector<sparse_vec>&, size_t tcoef,
@@ -131,7 +130,7 @@ private:
     size_t m_dim;  // taille du vecteur
 
     topology m_topo;
-    bool m_verbose;
+    int m_verbose;
 
     float* codebook;
 };

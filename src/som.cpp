@@ -36,7 +36,7 @@ size_t NBSTABLES = 0;
 static float iobuf[BUFSIZE];
 
 
-Som::Som(size_t h, size_t w, size_t d, topology topo, bool verbose) :
+Som::Som(size_t h, size_t w, size_t d, topology topo, int verbose) :
     m_height(h),
     m_width(w),
     m_dim(d),
@@ -49,7 +49,7 @@ Som::Som(size_t h, size_t w, size_t d, topology topo, bool verbose) :
     init();
 }
 
-Som::Som(const std::string& filename, topology topo, bool verbose) :
+Som::Som(const std::string& filename, topology topo, int verbose) :
     m_topo(topo),
     m_verbose(verbose)
 {
@@ -59,7 +59,7 @@ Som::Som(const std::string& filename, topology topo, bool verbose) :
     if (!myfile.is_open())
         throw "unable to open " + filename;
 
-    if (m_verbose)
+    if (m_verbose > 0)
     {
         cout << "loading codebook...";
         cout.flush();
@@ -91,10 +91,13 @@ Som::Som(const std::string& filename, topology topo, bool verbose) :
 
     myfile.close();
 
-    if (m_verbose)
+    if (m_verbose > 0)
     {
         cout << " OK" << endl;
-        cout << "  dimensions: " << m_height << "x" << m_width << "x" << m_dim << endl;
+        if (m_verbose > 1)
+        {
+            cout << "  dimensions: " << m_height << "x" << m_width << "x" << m_dim << endl;
+        }
     }
 }
 
@@ -319,7 +322,7 @@ void Som::train(const std::vector<sparse_vec>& data, size_t tmax,
 
     double tm = 0.;
 
-    if (m_verbose)
+    if (m_verbose > 0)
     {
         cout << "Start learning..." << endl;
 
@@ -387,7 +390,7 @@ void Som::train(const std::vector<sparse_vec>& data, size_t tmax,
         // Update network
         update(v, kStar, radius, alpha, stdCoeff);
 
-        if (m_verbose && t % percent == 0)
+        if (m_verbose > 1 && t % percent == 0)
         {
             cout << "  " << t / percent << "% (" << t << " / " << tmax << ")"
                  " - approx. QE " << Qe / percent << endl;
@@ -409,7 +412,7 @@ void Som::train(const std::vector<sparse_vec>& data, size_t tmax,
     delete [] w_coeff;
     delete [] wvprod;
 
-    if (m_verbose)
+    if (m_verbose > 0)
     {
 #if defined(_OPENMP)
         tm = omp_get_wtime() - tm;
@@ -418,7 +421,10 @@ void Som::train(const std::vector<sparse_vec>& data, size_t tmax,
 #endif
 
         cout << "Finished: elapsed : " << tm << "s" << endl;
-        cout << "  coeffs rescaled " << NBSTABLES << " times" << endl;
+        if (m_verbose > 1)
+        {
+            cout << "  coeffs rescaled " << NBSTABLES << " times" << endl;
+        }
 /*
         // get all BMUs
         vector<bmu> bmus = getBmus(data);

@@ -30,7 +30,8 @@ static void usage(const char* name)
         << "\t[ -r radius0 -R radiusN ] - radius at start and end (default r=(x+y)/2, R=0.5)" << endl
         << "\t[ -H radiusCool ] - radius cooling: 0=linear, 1=exponential (default 0)" << endl
         << "\t[ -s stdCoeff ]   - sigma = radius * coeff (default 0.3)" << endl
-        << "\t[ -q ] - quiet" << endl;
+        << "\t[ -q ] - set verbosity level to 0 (default 1)" << endl
+        << "\t[ -v ] - set verbosity level to 2 (default 1)" << endl;
     exit(-1);
 }
 
@@ -42,12 +43,12 @@ int main(int argc, char *argv[])
     som::cooling rcool = som::LINEAR;
     string filename, codebookfile, classfile, loadfile;
     char outType=0, classType=0;
-    bool normalize = false, zerobased = true;
-    bool verbose=true, load=false;
+    bool normalize = false, zerobased = true, load=false;
+    int verbose=1;
 
     // Pase command line arguments
     int opt;
-    while ((opt = getopt(argc, argv, "i:o:O:l:C:c:x:y:t:T:r:R:a:A:s:n:Nuq")) != -1)
+    while ((opt = getopt(argc, argv, "i:o:O:l:C:c:x:y:t:T:r:R:a:A:s:n:Nuqv")) != -1)
     {
         switch (opt) {
         case 'i':   // infile
@@ -113,7 +114,10 @@ int main(int argc, char *argv[])
             normalize = true;
             break;
         case 'q':   // quiet
-            verbose = false;
+            verbose = 0;
+            break;
+        case 'v':   // verbose
+            verbose = 2;
             break;
         default: /* '?' */
             usage(argv[0]);
@@ -134,7 +138,7 @@ int main(int argc, char *argv[])
     dataset dataSet;
     try
     {
-        if (verbose)
+        if (verbose > 0)
         {
             cout << "Loading dataset... ";
             cout.flush();
@@ -145,17 +149,20 @@ int main(int argc, char *argv[])
         clock_t tm2 = clock();
         ncols = dataSet.nfeatures();
 
-        if (verbose)
+        if (verbose > 0)
         {
             cout << "OK (" << (float)(tm2 - tm1) / CLOCKS_PER_SEC << "s)" << endl;
-            cout << "  " << dataSet.nsamples() << " vectors read" << endl;
-            cout << "  " << ncols << " features" << endl;
+            if (verbose > 1)
+            {
+                cout << "  " << dataSet.nsamples() << " vectors read" << endl;
+                cout << "  " << ncols << " features" << endl;
+            }
         }
 
         // normalize vectors
         if (normalize)
         {
-            if (verbose)
+            if (verbose > 0)
             {
                 cout << "Normalize the dataset... ";
                 cout.flush();
@@ -164,7 +171,7 @@ int main(int argc, char *argv[])
             {
                 v.normalize();
             }
-            if (verbose)
+            if (verbose > 0)
             {
                 cout << "OK" << endl;
             }
@@ -195,9 +202,10 @@ int main(int argc, char *argv[])
     // codebook output
     if (!codebookfile.empty())
     {
-        if (verbose)
+        if (verbose > 0)
         {
-            cout << " writing codebook to " << codebookfile << endl;
+            cout << " writing codebook to " << codebookfile << " ...";
+            cout.flush();
         }
 
         try
@@ -216,14 +224,20 @@ int main(int argc, char *argv[])
             cerr << err << endl;
             return -1;
         }
+        
+        if (verbose > 0)
+        {
+            cout << " OK" << endl;
+        }
     }
 
     // classification output
     if (!classfile.empty())
     {
-        if (verbose)
+        if (verbose > 0)
         {
             cout << " writing classification to " << classfile << " ...";
+            cout.flush();
         }
 
         bool count = (classType=='C');
@@ -236,7 +250,7 @@ int main(int argc, char *argv[])
             cerr << err << endl;
             return -1;
         }
-        if (verbose)
+        if (verbose > 0)
         {
             cout << " OK" << endl;
         }
