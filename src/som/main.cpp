@@ -2,7 +2,6 @@
 #include "../som.h"
 
 #include <cstdlib>
-#include <ctime>
 #include <iostream>
 #include <string>
 #include <cassert>
@@ -31,8 +30,7 @@ static void usage(const char* name)
         << "\t[ -H radiusCool ] - radius cooling: 0=linear, 1=exponential (default 0)" << endl
         << "\t[ -h  alphaCool ] - alpha cooling: 0=linear, 1=exponential (default 0)" << endl
         << "\t[ -s stdCoeff ]   - sigma = radius * coeff (default 0.3)" << endl
-        << "\t[ -q ] - set verbosity level to 0 (default 1)" << endl
-        << "\t[ -v ] - set verbosity level to 2 (default 1)" << endl;
+        << "\t[ -v ] - increase verbosity level (default 0, max 2)" << endl;
     exit(-1);
 }
 
@@ -45,11 +43,12 @@ int main(int argc, char *argv[])
     string filename, codebookfile, classfile, loadfile;
     char outType=0, classType=0;
     bool normalize = false, zerobased = true, load=false;
-    int verbose = 1;
+    int verbose=0;
+    double wtime=0;
 
     // Pase command line arguments
     int opt;
-    while ((opt = getopt(argc, argv, "i:o:O:l:C:c:x:y:t:T:r:R:a:A:s:n:h:H:Nuqv")) != -1)
+    while ((opt = getopt(argc, argv, "i:o:O:l:C:c:x:y:t:T:r:R:a:A:s:n:h:H:Nuv")) != -1)
     {
         switch (opt) {
         case 'i':   // infile
@@ -128,11 +127,8 @@ int main(int argc, char *argv[])
         case 'N':
             normalize = true;
             break;
-        case 'q':   // quiet
-            verbose = 0;
-            break;
         case 'v':   // verbose
-            verbose = 2;
+            verbose++;
             break;
         default: /* '?' */
             usage(argv[0]);
@@ -150,52 +146,56 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    if (verbose > 0)
+    {
+        cout << "Loading dataset... ";
+        cout.flush();
+
+        wtime = get_wall_time();
+    }
+
     dataset dataSet;
+
     try
     {
-        if (verbose > 0)
-        {
-            cout << "Loading dataset... ";
-            cout.flush();
-        }
-
-        clock_t tm1 = clock();
         dataSet = loadSparseData(filename, zerobased ? 0 : 1);
-        clock_t tm2 = clock();
         ncols = dataSet.nfeatures();
-
-        if (verbose > 0)
-        {
-            cout << "OK (" << (float)(tm2 - tm1) / CLOCKS_PER_SEC << "s)" << endl;
-            if (verbose > 1)
-            {
-                cout << "  " << dataSet.nsamples() << " vectors read" << endl;
-                cout << "  " << ncols << " features" << endl;
-            }
-        }
-
-        // normalize vectors
-        if (normalize)
-        {
-            if (verbose > 0)
-            {
-                cout << "Normalize the dataset... ";
-                cout.flush();
-            }
-            for (sparse_vec& v: dataSet.samples)
-            {
-                v.normalize();
-            }
-            if (verbose > 0)
-            {
-                cout << "OK" << endl;
-            }
-        }
     }
     catch(string& err)
     {
+        //cout << endl;
         cerr << err << endl;
         return -1;
+    }
+
+    if (verbose > 0)
+    {
+        wtime = get_wall_time() - wtime;
+
+        cout << "OK (" << wtime << "s)" << endl;
+        if (verbose > 1)
+        {
+            cout << "  " << dataSet.nsamples() << " vectors read" << endl;
+            cout << "  " << ncols << " features" << endl;
+        }
+    }
+
+    // normalize vectors
+    if (normalize)
+    {
+        if (verbose > 0)
+        {
+            cout << "Normalize the dataset... ";
+            cout.flush();
+        }
+        for (sparse_vec& v: dataSet.samples)
+        {
+            v.normalize();
+        }
+        if (verbose > 0)
+        {
+            cout << "OK" << endl;
+        }
     }
 
     if (tmax==-1)
@@ -237,6 +237,7 @@ int main(int argc, char *argv[])
         }
         catch(string& err)
         {
+            //cout << endl;
             cerr << err << endl;
             return -1;
         }
@@ -256,16 +257,18 @@ int main(int argc, char *argv[])
             cout.flush();
         }
 
-        bool count = (classType=='C');
         try
         {
+            bool count = (classType=='C');
             som.classify(dataSet, classfile, count);
         }
         catch(string& err)
         {
+            //cout << endl;
             cerr << err << endl;
             return -1;
         }
+
         if (verbose > 0)
         {
             cout << " OK" << endl;

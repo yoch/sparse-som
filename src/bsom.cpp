@@ -272,11 +272,7 @@ void BSom::train(const vector<sparse_vec>& data, size_t tmax,
     {
         cout << "Start learning..." << endl;
 
-#if defined(_OPENMP)
-        tm = omp_get_wtime();
-#else
-        tm = (double) clock() / CLOCKS_PER_SEC;
-#endif
+        tm = get_wall_time();
     }
 
     size_t * bmus = new size_t[data.size()];
@@ -292,11 +288,7 @@ void BSom::train(const vector<sparse_vec>& data, size_t tmax,
 
     if (m_verbose > 0)
     {
-#if defined(_OPENMP)
-        tm = omp_get_wtime() - tm;
-#else
-        tm = (double) clock() / CLOCKS_PER_SEC - tm;
-#endif
+        tm = get_wall_time() - tm;
 
         cout << "Finished: elapsed " << tm << "s" << endl;
 /*

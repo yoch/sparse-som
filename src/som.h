@@ -7,12 +7,18 @@
 #include <unordered_map>
 #include <string>
 #include <cfloat>
+#include <chrono>
 
 // helper
 template<class T>
 inline T squared(T x)
 {
     return x * x;
+}
+
+inline double get_wall_time()
+{
+    return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 namespace som {

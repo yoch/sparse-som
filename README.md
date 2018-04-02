@@ -59,7 +59,7 @@ Usage: sparse-som
         [ -H radiusCool ] - radius cooling: 0=linear, 1=exponential (default 0)
         [ -h  alphaCool ] - alpha cooling: 0=linear, 1=exponential (default 0)
         [ -s stdCoeff ]   - sigma = radius * coeff (default 0.3)
-        [ -q ] - quiet
+        [ -v ] - increase verbosity level (default 0, max 2)
 ```
 
 #### sparse-bsom
@@ -81,7 +81,7 @@ Usage: sparse-bsom
         [ -r radius0 -R radiusN ] - radius at start and end (default r=(x+y)/2, R=0.5)
         [ -H radiusCool ] - radius cooling: 0=linear, 1=exponential (default 0)
         [ -s stdCoeff ]   - sigma = radius * coeff (default 0.3)
-        [ -q ] - quiet
+        [ -v ] - increase verbosity level (default 0, max 2)
 ```
 
 To control the number of threads used by OpenMP, set to `OMP_NUM_THREADS` variable to the desired value, for example :
