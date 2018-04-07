@@ -1,7 +1,7 @@
 TARGET=sparse-bsom
 CXX=g++
 CXXFLAGS=--std=c++11 -Wall -Wextra
-SRC=../data.cpp ../sparse_vec.cpp ../bsom.cpp main.cpp
+SRC=../data.cpp ../bsom.cpp main.cpp
 BUILDDIR=../../build
 DATADIR=../../datasets
 

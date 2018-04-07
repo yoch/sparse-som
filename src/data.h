@@ -6,22 +6,38 @@
 #include <vector>
 #include <string>
 
-#include "sparse_vec.h"
 
-
-struct dataset
+struct CSR
 {
-    std::vector<sparse_vec> samples;
-    std::vector<std::string> labels;
-    size_t nfeatures() const;
-    size_t nsamples() const
-    {
-        return samples.size();
-    }
+    float * data;
+    int * indices;
+    int * indptr;
+    int nrows;
+    int ncols;
+    int nnz;
+
+    void normalize();
 };
 
-// load data at SVM sparse format
-dataset loadSparseData(const std::string& filename, uint32_t offset=0);
+
+class dataset : public CSR
+{
+public:
+
+    dataset();
+    // load from filename
+    dataset(const std::string& filename, int offset=0);
+
+    size_t nfeatures() const { return ncols; }
+    size_t nsamples() const { return nrows; }
+
+    std::vector<std::string> labels;
+
+private:
+    std::vector<float> _data;
+    std::vector<int> _indices;
+    std::vector<int> _indptr;
+};
 
 
 #endif // DATA_H_INCLUDED

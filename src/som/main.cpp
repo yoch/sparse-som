@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 
     try
     {
-        dataSet = loadSparseData(filename, zerobased ? 0 : 1);
+        dataSet = dataset(filename, zerobased ? 0 : 1);
         ncols = dataSet.nfeatures();
     }
     catch(string& err)
@@ -188,10 +188,7 @@ int main(int argc, char *argv[])
             cout << "Normalize the dataset... ";
             cout.flush();
         }
-        for (sparse_vec& v: dataSet.samples)
-        {
-            v.normalize();
-        }
+        dataSet.normalize();
         if (verbose > 0)
         {
             cout << "OK" << endl;
@@ -200,7 +197,7 @@ int main(int argc, char *argv[])
 
     if (tmax==-1)
     {
-        tmax = ((tcoef==-1) ? 10 : tcoef) * dataSet.samples.size();
+        tmax = ((tcoef==-1) ? 10 : tcoef) * dataSet.nsamples();
     }
 
 
@@ -213,7 +210,7 @@ int main(int argc, char *argv[])
         r0 = (float) (som.getx() + som.gety()) / 2;
     }
 
-    som.train(dataSet.samples, tmax, r0, a0, rN, aN, sc, rcool, acool);
+    som.train(dataSet, tmax, r0, a0, rN, aN, sc, rcool, acool);
 
     // codebook output
     if (!codebookfile.empty())

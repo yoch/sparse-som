@@ -53,11 +53,11 @@ public:
     Som(const std::string& filename, topology=RECT, int=0);
     ~Som();
 
-    void train(const std::vector<sparse_vec>&, size_t tmax,
+    void train(const CSR&, size_t tmax,
                double r0, double a0, double rN=FLT_MIN, double aN=FLT_MIN,
                double stdCoeff=0.3, cooling rc=LINEAR, cooling ac=LINEAR);
 
-    std::vector<bmu> getBmus(const std::vector<sparse_vec>&) const;
+    std::vector<bmu> getBmus(const CSR&) const;
     std::vector<label_counter> calibrate(const dataset& dataSet) const;
 
     // IO gestion
@@ -74,8 +74,8 @@ public:
 private:
 
     void init();
-    void update(const sparse_vec& v, size_t k, double r, double a, double s);
-    size_t getBmu(const sparse_vec& v, double& d) const;
+    void update(const CSR& data, size_t n, size_t k, double r, double a, double s);
+    size_t getBmu(const CSR& data, const size_t n, double& d) const;
     void stabilize(size_t k);
 
     /// attributes
@@ -89,6 +89,7 @@ private:
 
     double* codebook;
     double* squared_sum;
+    double* data_squared_sum;
     double* w_coeff;
     double * wvprod;
 };
@@ -103,10 +104,10 @@ public:
     BSom(const std::string& filename, topology=RECT, int=0);
     ~BSom();
 
-    void train(const std::vector<sparse_vec>&, size_t tcoef,
+    void train(const CSR&, size_t tcoef,
                float r0, float rN=0.f, float stdCoef=0.3, cooling rc=LINEAR);
 
-    void getBmus(const std::vector<sparse_vec>&, size_t * const bmus, float * const dsts) const;
+    void getBmus(const CSR&, size_t * const bmus, float * const dsts) const;
     std::vector<label_counter> calibrate(const dataset& dataSet) const;
 
     // IO gestion
@@ -123,9 +124,9 @@ public:
 private:
 
     void init();
-    void update(const std::vector<sparse_vec>& data, const float r, const float s, size_t * const bmus);
+    void update(const CSR& data, const float r, const float s, size_t * const bmus);
     //size_t getBmu(const sparse_vec& v, float& d) const;
-    void trainOneEpoch(const std::vector<sparse_vec>&, size_t t, size_t tmax,
+    void trainOneEpoch(const CSR&, size_t t, size_t tmax,
                        float radius0, float radiusN, float stdCoef, cooling rc,
                        size_t * const bmus, float * const dsts);
 
@@ -139,6 +140,7 @@ private:
     int m_verbose;
 
     float* codebook;
+    float* data_squared_sum;
 };
 
 }

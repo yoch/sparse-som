@@ -96,7 +96,7 @@ Som::Som(const std::string& filename, topology topo, int verbose) :
         cout << " OK" << endl;
         if (m_verbose > 1)
         {
-            cout << "  dimensions: " << m_height << "x" << m_width << "x" << m_dim << endl;
+            cout << "  dimensions: " << m_height << " x " << m_width << " x " << m_dim << endl;
         }
     }
 }
@@ -107,12 +107,12 @@ Som::~Som()
 }
 
 
-static double prod(const sparse_vec& v, const double * const w)
+static double prod(const float * const vsp, const int * const ind, const size_t vsz, const double * const w)
 {
     double ret = 0.;
-    for (auto it=v.cbegin(); it!=v.cend(); ++it)
+    for (size_t it=0; it<vsz; ++it)
     {
-        ret += it->val * w[it->idx];
+        ret += vsp[it] * w[ind[it]];
     }
     return ret;
 }
@@ -127,16 +127,16 @@ static double squared(const double * const w, size_t sz)
     return ret;
 }
 
-static inline double euclideanDistanceSq(const sparse_vec& v, const double * const w, double w2, double wcoeff)
+static inline double euclideanDistanceSq(const float * const vsp, const int * const ind, const size_t vsz, const double x2, const double * const w, const double w2, const double wcoeff)
 {
-    return max(0., w2 - 2 * wcoeff * prod(v, w) + v.sumOfSquares);
+    return max(0., w2 - 2 * wcoeff * prod(vsp, ind, vsz, w) + x2);
 }
 
-static inline void partial_update(const sparse_vec& v, double * const w, double vcoeff)
+static inline void partial_update(const float * const vsp, const int * const ind, const size_t n, double * const w, double vcoeff)
 {
-    for (auto it=v.cbegin(); it!=v.cend(); ++it)
+    for (size_t it=0; it<n; ++it)
     {
-        w[it->idx] += it->val * vcoeff;
+        w[ind[it]] += vsp[it] * vcoeff;
     }
 }
 
@@ -174,8 +174,13 @@ void Som::stabilize(size_t k)
 }
 
 
-size_t Som::getBmu(const sparse_vec& v, double& dStar) const
+size_t Som::getBmu(const CSR& data, const size_t n, double& dStar) const
 {
+    const size_t ind = data.indptr[n];
+    const size_t vsz = data.indptr[n+1] - ind;
+    const float * const vsp = &data.data[ind];
+    const int * const vind = &data.indices[ind];
+
     bmu mini = bmu(-1, DBL_MAX);
 /*
 #pragma omp declare \
@@ -189,7 +194,7 @@ size_t Som::getBmu(const sparse_vec& v, double& dStar) const
     for (size_t k=0; k < m_height*m_width; ++k)
     {
         //precompute w*v (to be used at update stage)
-        wvprod[k] = prod(v, codebook + k * m_dim);
+        wvprod[k] = prod(vsp, vind, vsz, codebook + k * m_dim);
 
         // fast squared euclidean dst (invariant by v^2) : w^2 - 2 w.v
         const double dst = squared_sum[k] - 2 * (wvprod[k] * w_coeff[k]);
@@ -201,11 +206,11 @@ size_t Som::getBmu(const sparse_vec& v, double& dStar) const
     }
 
     // store values
-    dStar = max(0., mini.dst + v.sumOfSquares); // correct euclidean dist
+    dStar = max(0., mini.dst + data_squared_sum[n]); // correct euclidean dist
     return mini.idx;
 }
 
-void Som::update(const sparse_vec& v, size_t kStar, double radius, double alpha, double stdCoeff)
+void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double alpha, double stdCoeff)
 {
     const int x = kStar % m_width;
     const int y = kStar / m_width;
@@ -214,6 +219,10 @@ void Som::update(const sparse_vec& v, size_t kStar, double radius, double alpha,
               stopI = min((int)m_height-1,y+r),
               startJ = max(0,x-r),
               stopJ = min((int)m_width-1,x+r);
+    const size_t ind = data.indptr[n];
+    const size_t vsz = data.indptr[n+1] - ind;
+    const float * const vsp = &data.data[ind];
+    const int * const vind = &data.indices[ind];
 
 //#pragma omp parallel for collapse(2)
     //schedule(static,stopJ-startJ+1)
@@ -252,11 +261,11 @@ void Som::update(const sparse_vec& v, size_t kStar, double radius, double alpha,
                 // calculate and store {w_{t+1}}^2
                 squared_sum[idx] = squared(b) * squared_sum[idx] +
                                    2 * a * b * w_coeff[idx] * wvprod[idx] +
-                                   squared(a) * v.sumOfSquares;
+                                   squared(a) * data_squared_sum[n];
 
                 w_coeff[idx] *= b;  // do that before using in expression below
 
-                partial_update(v, codebook + idx * m_dim, a / w_coeff[idx]);
+                partial_update(vsp, vind, vsz, codebook + idx * m_dim, a / w_coeff[idx]);
 
                 if (w_coeff[idx] < EPSILON)
                 {
@@ -267,12 +276,12 @@ void Som::update(const sparse_vec& v, size_t kStar, double radius, double alpha,
     }
 }
 
-vector<bmu> Som::getBmus(const vector<sparse_vec>& data) const
+vector<bmu> Som::getBmus(const CSR& data) const
 {
 /*
     clock_t t1 = clock();
 */
-    vector<bmu> bmus = vector<bmu>(data.size(), bmu(0, DBL_MAX));
+    vector<bmu> bmus = vector<bmu>(data.nrows, bmu(0, DBL_MAX));
 
     for (size_t k=0; k < m_height*m_width; ++k)
     {
@@ -280,9 +289,11 @@ vector<bmu> Som::getBmus(const vector<sparse_vec>& data) const
 
 #pragma omp parallel for
 
-        for (idx_t i=0; i < data.size(); ++i)
+        for (idx_t i=0; i < (idx_t) data.nrows; ++i)
         {
-            const double dst = euclideanDistanceSq(data[i], w, squared_sum[k], w_coeff[k]);
+            const size_t ind = data.indptr[i];
+            const size_t vsz = data.indptr[i+1] - ind;
+            const double dst = euclideanDistanceSq(&data.data[ind], &data.indices[ind], vsz, data_squared_sum[i], w, squared_sum[k], w_coeff[k]);
 
             if (dst < bmus[i].dst)
             {
@@ -314,7 +325,7 @@ static double getQE(vector<bmu>& bmus)
 }
 */
 
-void Som::train(const std::vector<sparse_vec>& data, size_t tmax,
+void Som::train(const CSR& data, size_t tmax,
            double radius0, double alpha0, double radiusN, double alphaN,
            double stdCoeff, cooling rcool, cooling acool)
 {
@@ -331,14 +342,26 @@ void Som::train(const std::vector<sparse_vec>& data, size_t tmax,
 
     // allocate helpers internal arrays
     squared_sum = new double[m_height * m_width];
+    data_squared_sum = new double[data.nrows];
     w_coeff = new double[m_height * m_width];
     wvprod = new double[m_height * m_width];
+
+#pragma omp parallel for
+    // Init x^2 once
+    for (idx_t i=0; i < (idx_t) data.nrows; ++i)
+    {
+        double sumOfSquares = 0.;
+        for (int j=data.indptr[i]; j<data.indptr[i+1]; ++j)
+        {
+            sumOfSquares += data.data[j] * data.data[j];
+        }
+        data_squared_sum[i] = sumOfSquares;
+    }
 
 #pragma omp parallel for
     // Init w^2 before training
     for (idx_t k=0; k < m_height * m_width; ++k)
     {
-        //TODO: normalize ?
         squared_sum[k] = squared(codebook + k * m_dim, m_dim);
     }
 
@@ -349,7 +372,7 @@ void Som::train(const std::vector<sparse_vec>& data, size_t tmax,
     const size_t percent = tmax / 100;
 
     default_random_engine rng(time(NULL));
-    uniform_int_distribution<size_t> uidist(0, data.size()-1);
+    uniform_int_distribution<size_t> uidist(0, data.nrows-1);
     for (size_t t=1; t <= tmax; ++t)
     {
         double radius, alpha;
@@ -376,15 +399,14 @@ void Som::train(const std::vector<sparse_vec>& data, size_t tmax,
         }
 
         const size_t k = uidist(rng);
-        const sparse_vec& v = data[k];
 
         // Get the best match unit
         double dStar;
-        const size_t kStar = getBmu(v, dStar);
+        const size_t kStar = getBmu(data, k, dStar);
         Qe += sqrt(dStar);
 
         // Update network
-        update(v, kStar, radius, alpha, stdCoeff);
+        update(data, k, kStar, radius, alpha, stdCoeff);
 
         if (m_verbose > 1 && t % percent == 0)
         {
@@ -405,6 +427,7 @@ void Som::train(const std::vector<sparse_vec>& data, size_t tmax,
 
     // dealloc internal helpers arrays
     delete [] squared_sum;
+    delete [] data_squared_sum;
     delete [] w_coeff;
     delete [] wvprod;
 
@@ -494,7 +517,7 @@ void Som::dumpSparse(const string& filename, double epsilon) const
 vector<label_counter> Som::calibrate(const dataset& dataSet) const
 {
     vector<label_counter> mappings = vector<label_counter>(m_height*m_width);
-    vector<bmu> bmus = getBmus(dataSet.samples);
+    vector<bmu> bmus = getBmus(dataSet);
     for (size_t k=0; k < dataSet.nsamples(); ++k)
     {
         const bmu & star = bmus[k];

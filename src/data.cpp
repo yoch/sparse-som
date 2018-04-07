@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cctype>
 #include <cstring>
+#include <cmath>
 #include <cassert>
 #include <algorithm>
 #include <numeric>
@@ -12,18 +13,40 @@
 using namespace std;
 
 
-dataset loadSparseData(const string& filename, uint32_t offset)
+void CSR::normalize()
 {
-    dataset dataSet;
+    for (int i=0; i<nrows; ++i)
+    {
+        float sumOfSquares = 0.;
+        for (int j=indptr[i]; j<indptr[i+1]; ++j)
+        {
+            sumOfSquares += data[j] * data[j];
+        }
+        const float norm = std::sqrt(sumOfSquares);
+        for (int j=indptr[i]; j<indptr[i+1]; ++j)
+        {
+            data[j] /= norm;
+        }
+    }
+}
 
+
+dataset::dataset()
+{}
+
+dataset::dataset(const string& filename, int offset)
+{
     ifstream myfile;
     myfile.open(filename);
 
     if (!myfile.is_open())
-        throw "impossible d'ouvrir le fichier " + filename;
+        throw "impossible d'ouvrir le fichier " + string(filename);
 
     string line;
     size_t nline = 0;
+    ncols = 0;  // store maximal indice found
+
+    _indptr.push_back(0);
 
     while(!myfile.eof())
     {
@@ -37,17 +60,15 @@ dataset loadSparseData(const string& filename, uint32_t offset)
         if (line[0] == '#')
             continue;
 
-        size_t nmemb = count(line.cbegin(), line.cend(), ':');
-        if (nmemb == 0)
-        {
-            throw "invalid line: " + to_string(nline);
-        }
-
-        sparse_vec vec;
-        vec.reserve(nmemb);
-
         char * buf = (char*) line.c_str();
         char label[128];
+
+/*
+        // skip the label (if any)
+        char * s = strchr(buf, ' ');
+        if (s == NULL || strchr(buf, ':') < s)
+            s = buf;
+*/
 
         //TODO: make labels optional ?
         char * s = strchr(buf, ' ');
@@ -61,13 +82,17 @@ dataset loadSparseData(const string& filename, uint32_t offset)
         }
         strncpy(label, buf, s-buf);
         label[s-buf] = '\0';
+        
+        // store this label
+        labels.push_back(label);
 
+        // scan values
         while (*s != '#' && *s != '\n' && *s != '\0')
         {
             char * end;
 
             // get column index
-            uint32_t idx = strtoul(s, &end, 10);
+            int idx = strtoul(s, &end, 10);
             if (end==s)
             {
                 throw "bad index '" + string(s).substr(0, 8)
@@ -98,35 +123,38 @@ dataset loadSparseData(const string& filename, uint32_t offset)
             }
             s = end;
 
+            idx -= offset;
+            if (idx > ncols)
+            {
+                ncols = idx;
+            }
+
             // prevents unordered row
-            if (vec.size() > 0 && idx-offset <= vec.back().idx)
+            if (_data.size() > (size_t) _indptr.back() && idx <= _indices.back())
             {
                 throw "unordered or duplicate rows don't allowed."
                         " at line: " + to_string(nline) + ", col: " + to_string(s-buf+1);
             }
 
-            vec.push_back(cell{idx-offset, val});
+            _data.push_back(val);
+            _indices.push_back(idx);
 
             // skip trailing whitespaces
             while(*s==' ') ++s;
         }
 
-        dataSet.labels.push_back(label);
-        dataSet.samples.push_back(move(vec));
+        _indptr.push_back(_data.size());
     }
 
     myfile.close();
 
-    return dataSet;
-}
+    // store the pointers
+    data = _data.data();
+    indices = _indices.data();
+    indptr = _indptr.data();
 
-// assume vectors is sorted
-size_t dataset::nfeatures() const
-{
-    unsigned maxi = 0;
-    for (const sparse_vec& v : samples)
-    {
-        maxi = max(maxi, v.back().idx + 1);
-    }
-    return maxi;
+    // set additional values
+    ++ncols;    // convert max indice to ncols
+    nrows = _indptr.size() - 1;
+    nnz = _data.size();
 }

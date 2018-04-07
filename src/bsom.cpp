@@ -76,7 +76,7 @@ BSom::BSom(const std::string& filename, topology topo, int verbose) :
         cout << " OK" << endl;
         if (m_verbose > 1)
         {
-            cout << "  dimensions: " << m_height << "x" << m_width << "x" << m_dim << endl;
+            cout << "  dimensions: " << m_height << " x " << m_width << " x " << m_dim << endl;
         }
     }
 }
@@ -87,12 +87,12 @@ BSom::~BSom()
 }
 
 
-static float prod(const sparse_vec& v, const float * const w)
+static float prod(const float * const vsp, const int * const vind, const size_t vsz, const float * const w)
 {
     float ret = 0.;
-    for (auto it=v.cbegin(); it!=v.cend(); ++it)
+    for (size_t it=0; it<vsz; ++it)
     {
-        ret += it->val * w[it->idx];
+        ret += vsp[it] * w[vind[it]];
     }
     return ret;
 }
@@ -107,9 +107,9 @@ static float squared(const float * const w, size_t sz)
     return ret;
 }
 
-static inline float euclideanDistanceSq(const sparse_vec& v, const float * const w, float w2)
+static inline float euclideanDistanceSq(const float * const vsp, const int * const vind, const size_t vsz, float x2, const float * const w, float w2)
 {
-    return max(0.f, w2 - 2 * prod(v, w) + v.sumOfSquares);
+    return max(0.f, w2 - 2 * prod(vsp, vind, vsz, w) + x2);
 }
 
 /// init codebook at random
@@ -133,10 +133,10 @@ void BSom::init()
   }
 }
 
-void BSom::getBmus(const vector<sparse_vec>& data, size_t * const bmus, float * const dsts) const
+void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts) const
 {
-    fill_n(bmus, data.size(), 0);
-    fill_n(dsts, data.size(), FLT_MAX);
+    fill_n(bmus, data.nrows, 0);
+    fill_n(dsts, data.nrows, FLT_MAX);
 
     for (size_t k=0; k < m_height * m_width; ++k)
     {
@@ -148,9 +148,14 @@ void BSom::getBmus(const vector<sparse_vec>& data, size_t * const bmus, float * 
 // ensure that two threads don't access shared data (at i index) at a time
 #pragma omp parallel for // shared(data,k)
 
-        for (idx_t i=0; i < data.size(); ++i)
+        for (idx_t i=0; i < (idx_t) data.nrows; ++i)
         {
-            const float dst = euclideanDistanceSq(data[i], w, w2);
+            const size_t ind = data.indptr[i];
+            const size_t vsz = data.indptr[i+1] - ind;
+            const float * const vsp = &data.data[ind];
+            const int * const vind = &data.indices[ind];
+
+            const float dst = euclideanDistanceSq(vsp, vind, vsz, data_squared_sum[i], w, w2);
 
             if (dst < dsts[i])
             {
@@ -161,7 +166,7 @@ void BSom::getBmus(const vector<sparse_vec>& data, size_t * const bmus, float * 
     }
 }
 
-void BSom::update(const vector<sparse_vec>& data, const float radius, const float stdCoef, size_t * const bmus)
+void BSom::update(const CSR& data, const float radius, const float stdCoef, size_t * const bmus)
 {
 #pragma omp parallel // shared(data)
  {
@@ -178,9 +183,13 @@ void BSom::update(const vector<sparse_vec>& data, const float radius, const floa
         float denominator = 0.f;
         fill_n(numerator, m_dim, 0.f);
 
-        for (size_t n=0; n < data.size(); ++n)
+        for (size_t n=0; n < (size_t) data.nrows; ++n)
         {
-            const sparse_vec& v = data[n];
+            const size_t ind = data.indptr[n];
+            const size_t vsz = data.indptr[n+1] - ind;
+            const float * const vsp = &data.data[ind];
+            const int * const vind = &data.indices[ind];
+
             const int i = bmus[n] / m_width,
                       j = bmus[n] % m_width;
 
@@ -211,9 +220,9 @@ void BSom::update(const vector<sparse_vec>& data, const float radius, const floa
             const float h = exp(-d2 / (2 * squared(radius * stdCoef)));
 
             denominator += h;
-            for (auto it=v.cbegin(); it!=v.cend(); ++it)
+            for (size_t it=0; it<vsz; ++it)
             {
-                numerator[it->idx] += h * it->val;
+                numerator[vind[it]] += h * vsp[it];
             }
         }
 
@@ -230,7 +239,7 @@ void BSom::update(const vector<sparse_vec>& data, const float radius, const floa
  }
 }
 
-void BSom::trainOneEpoch(const vector<sparse_vec>& data, size_t t, size_t tmax,
+void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
                         float radius0, float radiusN, float stdCoef, cooling rcool,
                         size_t * const bmus, float * const dsts)
 {
@@ -257,13 +266,12 @@ void BSom::trainOneEpoch(const vector<sparse_vec>& data, size_t t, size_t tmax,
 
     if (m_verbose > 1)
     {
-        float Qe = accumulate(dsts, dsts+data.size(), 0.f, [](float acc, float val){ return acc + sqrt(val); })
-                        / data.size();
+        float Qe = accumulate(dsts, dsts+data.nrows, 0.f, [](float acc, float val){ return acc + sqrt(val); }) / data.nrows;
         cout << "  epoch " << t << " / " << tmax << " - QE " << Qe << endl;
     }
 }
 
-void BSom::train(const vector<sparse_vec>& data, size_t tmax,
+void BSom::train(const CSR& data, size_t tmax,
            float radius0, float radiusN, float stdCoef, cooling rcool)
 {
     double tm = 0.;
@@ -275,8 +283,21 @@ void BSom::train(const vector<sparse_vec>& data, size_t tmax,
         tm = get_wall_time();
     }
 
-    size_t * bmus = new size_t[data.size()];
-    float * dsts = new float[data.size()];
+    size_t * bmus = new size_t[data.nrows];
+    float * dsts = new float[data.nrows];
+    data_squared_sum = new float[data.nrows];
+
+#pragma omp parallel for
+    // Init x^2 once
+    for (idx_t i=0; i < (idx_t) data.nrows; ++i)
+    {
+        double sumOfSquares = 0.;
+        for (int j=data.indptr[i]; j<data.indptr[i+1]; ++j)
+        {
+            sumOfSquares += data.data[j] * data.data[j];
+        }
+        data_squared_sum[i] = sumOfSquares;
+    }
 
     for (size_t t=1; t<=tmax; ++t)
     {
@@ -285,6 +306,7 @@ void BSom::train(const vector<sparse_vec>& data, size_t tmax,
 
     delete [] bmus;
     delete [] dsts;
+    delete [] data_squared_sum;
 
     if (m_verbose > 0)
     {
@@ -364,7 +386,8 @@ vector<label_counter> BSom::calibrate(const dataset& dataSet) const
     size_t * bmus = new size_t[dataSet.nsamples()];
     float * dsts = new float[dataSet.nsamples()];
 
-    getBmus(dataSet.samples, bmus, dsts);
+    // BUG: ...
+    getBmus(dataSet, bmus, dsts);
 
     vector<label_counter> mappings = vector<label_counter>(m_height*m_width);
     for (size_t k=0; k < dataSet.nsamples(); ++k)
