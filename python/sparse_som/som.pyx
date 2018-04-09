@@ -154,6 +154,22 @@ cdef class BSom:
         sparse_matrix_from_scipy(m, data)
         self.c_som.train(m, epochs, r0, rN, std, cool)
 
+    def _dst_argmin_min(self, data):
+        """\
+        Return the best match units for data.
+
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
+        :type data: :class:`scipy.sparse.spmatrix`
+        :returns: an array of the bmus coordinates (y,x)
+        :rtype: 2D :class:`numpy.ndarray`
+        """
+        cdef vector[sparse_vec] m
+        sparse_matrix_from_scipy(m, data)
+        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.size(), dtype=np.uintp)
+        cdef np.ndarray[float, ndim=1] mdst = np.empty(m.size(), dtype=np.single)
+        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data)
+        return bmus, np.sqrt(mdst)
+
     def bmus(self, data):
         """\
         Return the best match units for data.
@@ -163,16 +179,8 @@ cdef class BSom:
         :returns: an array of the bmus coordinates (y,x)
         :rtype: 2D :class:`numpy.ndarray`
         """
-        shape = self.c_som.gety(), self.c_som.getx()
-        cdef vector[sparse_vec] m
-        sparse_matrix_from_scipy(m, data)
-        cdef size_t * bmus = <size_t*> malloc(m.size() * sizeof(size_t))
-        cdef float * dsts = <float*> malloc(m.size() * sizeof(float))
-        self.c_som.getBmus(m, bmus, dsts)
-        cdef view.array arr = <size_t[:m.size()]> bmus
-        YX = np.unravel_index(arr, shape)
-        free(bmus)
-        free(dsts)
+        bmus, _ = self._dst_argmin_min(data)
+        YX = np.unravel_index(bmus, (self.nrows, self.ncols))
         return np.vstack(YX).transpose()
 
     @property
@@ -281,6 +289,19 @@ cdef class Som:
         sparse_matrix_from_scipy(m, data)
         self.c_som.train(m, tmax, r0, a0, rN, aN, std, rcool, acool)
 
+    def _dst_argmin_min(self, data):
+        codebook = self.codebook
+        shape = codebook.shape
+        codebook.shape = (-1, self.dim)
+        dst = -2 * data.dot(codebook.T)
+        dst += (codebook ** 2).sum(axis=1)
+        dst += data.power(2).sum(axis=1)
+        codebook.shape = shape
+        bmus = dst.argmin(axis=1)
+        mdst = dst.min(axis=1)
+        mdst[mdst<0] = 0
+        return bmus, np.sqrt(mdst)
+
     def bmus(self, data):
         """\
         Return the best match units for data.
@@ -290,12 +311,7 @@ cdef class Som:
         :returns: an array of the bmus coordinates (y,x)
         :rtype: 2D :class:`numpy.ndarray`
         """
-        codebook = self.codebook
-        codebook.shape = (self.ncols*self.nrows, self.dim)
-        dst = -2 * data.dot(codebook.T)
-        dst += (codebook ** 2).sum(axis=1)
-        dst += data.power(2).sum(axis=1)
-        bmus = np.argmin(dst, axis=1)
+        bmus, _ = self._dst_argmin_min(data)
         YX = np.unravel_index(bmus, (self.nrows, self.ncols))
         return np.vstack(YX).transpose()
 
