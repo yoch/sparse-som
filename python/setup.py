@@ -42,7 +42,7 @@ else:
 setup(
   name = 'sparse_som',
   packages = ['sparse_som'],
-  version = '0.4.4',
+  version = '0.5',
   description = 'Self-Organizing Maps for sparse inputs in python',
   author = 'J. Melka',
   url = 'https://github.com/yoch/sparse-som',

@@ -28,8 +28,13 @@ class SomClassifier:
         self._calibrate(data, labels)
 
     def _calibrate(self, data, labels):
+        # HACK: retrieve bmus and distances
+        amin, dsts = self._som._dst_argmin_min(data)
+        shape = (self._som.nrows, self._som.ncols)
+        YX = np.unravel_index(amin, shape)
+        bmus = np.vstack(YX).transpose()
+        # metwork calibration
         classifier = defaultdict(Counter)
-        bmus = self._som.bmus(data)
         for (i,j), label in zip(bmus, labels):
             classifier[i,j][label] += 1
         self.classifier = {}
@@ -37,8 +42,9 @@ class SomClassifier:
             maxi = max(cnt.items(), key=itemgetter(1))
             nb = sum(cnt.values())
             self.classifier[ij] = maxi[0], maxi[1] / nb
+        return bmus, dsts
 
-    def predict(self, data, unkown=None):
+    def predict(self, data, unkown=None, _bmus=None):
         """\
         Classify data according to previous calibration.
 
@@ -50,8 +56,10 @@ class SomClassifier:
         """
         if not hasattr(self, 'classifier'):
             raise RuntimeError('not calibrated')
+        if _bmus is None:
+            _bmus = self._som.bmus(data)
         lst = []
-        for i,j in self._som.bmus(data):
+        for i,j in _bmus:
             cls = self.classifier.get((i,j))
             if cls is None:
                 lst.append(unkown)
