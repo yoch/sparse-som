@@ -12,10 +12,15 @@ struct CSR
     float * data;
     int * indices;
     int * indptr;
+    float * _sqsum;
     int nrows;
     int ncols;
     int nnz;
 
+    ~CSR()
+    {
+        if (_sqsum) delete [] _sqsum;
+    }
     void normalize();
 };
 

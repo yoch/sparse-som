@@ -206,7 +206,7 @@ size_t Som::getBmu(const CSR& data, const size_t n, double& dStar) const
     }
 
     // store values
-    dStar = max(0., mini.dst + data_squared_sum[n]); // correct euclidean dist
+    dStar = max(0., mini.dst + data._sqsum[n]); // correct euclidean dist
     return mini.idx;
 }
 
@@ -261,7 +261,7 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
                 // calculate and store {w_{t+1}}^2
                 squared_sum[idx] = squared(b) * squared_sum[idx] +
                                    2 * a * b * w_coeff[idx] * wvprod[idx] +
-                                   squared(a) * data_squared_sum[n];
+                                   squared(a) * data._sqsum[n];
 
                 w_coeff[idx] *= b;  // do that before using in expression below
 
@@ -293,7 +293,7 @@ vector<bmu> Som::getBmus(const CSR& data) const
         {
             const size_t ind = data.indptr[i];
             const size_t vsz = data.indptr[i+1] - ind;
-            const double dst = euclideanDistanceSq(&data.data[ind], &data.indices[ind], vsz, data_squared_sum[i], w, squared_sum[k], w_coeff[k]);
+            const double dst = euclideanDistanceSq(&data.data[ind], &data.indices[ind], vsz, data._sqsum[i], w, squared_sum[k], w_coeff[k]);
 
             if (dst < bmus[i].dst)
             {
@@ -342,21 +342,8 @@ void Som::train(const CSR& data, size_t tmax,
 
     // allocate helpers internal arrays
     squared_sum = new double[m_height * m_width];
-    data_squared_sum = new double[data.nrows];
     w_coeff = new double[m_height * m_width];
     wvprod = new double[m_height * m_width];
-
-#pragma omp parallel for
-    // Init x^2 once
-    for (idx_t i=0; i < (idx_t) data.nrows; ++i)
-    {
-        double sumOfSquares = 0.;
-        for (int j=data.indptr[i]; j<data.indptr[i+1]; ++j)
-        {
-            sumOfSquares += data.data[j] * data.data[j];
-        }
-        data_squared_sum[i] = sumOfSquares;
-    }
 
 #pragma omp parallel for
     // Init w^2 before training
@@ -427,7 +414,6 @@ void Som::train(const CSR& data, size_t tmax,
 
     // dealloc internal helpers arrays
     delete [] squared_sum;
-    delete [] data_squared_sum;
     delete [] w_coeff;
     delete [] wvprod;
 

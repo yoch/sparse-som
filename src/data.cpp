@@ -17,12 +17,7 @@ void CSR::normalize()
 {
     for (int i=0; i<nrows; ++i)
     {
-        float sumOfSquares = 0.;
-        for (int j=indptr[i]; j<indptr[i+1]; ++j)
-        {
-            sumOfSquares += data[j] * data[j];
-        }
-        const float norm = std::sqrt(sumOfSquares);
+        const float norm = std::sqrt(_sqsum[i]);
         for (int j=indptr[i]; j<indptr[i+1]; ++j)
         {
             data[j] /= norm;
@@ -157,4 +152,20 @@ dataset::dataset(const string& filename, int offset)
     ++ncols;    // convert max indice to ncols
     nrows = _indptr.size() - 1;
     nnz = _data.size();
+
+
+    // After all, init X^2
+    _sqsum = new float[nrows];
+
+#pragma omp parallel for
+    for (int i=0; i < nrows; ++i)
+    {
+        double sumOfSquares = 0.;
+        for (int j=indptr[i]; j<indptr[i+1]; ++j)
+        {
+            sumOfSquares += data[j] * data[j];
+        }
+        _sqsum[i] = sumOfSquares;
+    }
+
 }

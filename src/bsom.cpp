@@ -107,10 +107,12 @@ static float squared(const float * const w, size_t sz)
     return ret;
 }
 
-static inline float euclideanDistanceSq(const float * const vsp, const int * const vind, const size_t vsz, float x2, const float * const w, float w2)
+/*
+static inline float euclideanDistanceSq(const float * const vsp, const int * const vind, const size_t vsz, const float * const w, float w2)
 {
     return max(0.f, w2 - 2 * prod(vsp, vind, vsz, w) + x2);
 }
+*/
 
 /// init codebook at random
 void BSom::init()
@@ -155,7 +157,8 @@ void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts) con
             const float * const vsp = &data.data[ind];
             const int * const vind = &data.indices[ind];
 
-            const float dst = euclideanDistanceSq(vsp, vind, vsz, data_squared_sum[i], w, w2);
+            // pseudo squared distance, d_i = d_i + X_i^2
+            const float dst = w2 - 2 * prod(vsp, vind, vsz, w); //euclideanDistanceSq(vsp, vind, vsz, w, w2);
 
             if (dst < dsts[i])
             {
@@ -266,8 +269,22 @@ void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
 
     if (m_verbose > 1)
     {
-        float Qe = accumulate(dsts, dsts+data.nrows, 0.f, [](float acc, float val){ return acc + sqrt(val); }) / data.nrows;
-        cout << "  epoch " << t << " / " << tmax << " - QE " << Qe << endl;
+        cout << "  epoch " << t << " / " << tmax;
+
+        // unable to compute QE if we don't have X^2
+        if (data._sqsum)
+        {
+            float Qe = 0;
+            for (int i=0; i<data.nrows; ++i)
+            {
+                Qe += sqrt(max(0.f, dsts[i] + data._sqsum[i]));
+            }
+            Qe /= data.nrows;
+
+            // Note: in fact, this is the quantization error of the previous step (before the update)
+            cout << " - QE: " << Qe;
+        }
+        cout << endl;
     }
 }
 
@@ -285,19 +302,6 @@ void BSom::train(const CSR& data, size_t tmax,
 
     size_t * bmus = new size_t[data.nrows];
     float * dsts = new float[data.nrows];
-    data_squared_sum = new float[data.nrows];
-
-#pragma omp parallel for
-    // Init x^2 once
-    for (idx_t i=0; i < (idx_t) data.nrows; ++i)
-    {
-        double sumOfSquares = 0.;
-        for (int j=data.indptr[i]; j<data.indptr[i+1]; ++j)
-        {
-            sumOfSquares += data.data[j] * data.data[j];
-        }
-        data_squared_sum[i] = sumOfSquares;
-    }
 
     for (size_t t=1; t<=tmax; ++t)
     {
@@ -306,7 +310,6 @@ void BSom::train(const CSR& data, size_t tmax,
 
     delete [] bmus;
     delete [] dsts;
-    delete [] data_squared_sum;
 
     if (m_verbose > 0)
     {
@@ -316,7 +319,7 @@ void BSom::train(const CSR& data, size_t tmax,
 /*
         getBmus(data, bmus, dsts);
         float Qe = accumulate(dsts, dsts+data.size(), 0.f, [](float acc, float val){ return acc + sqrt(max(val,0.f)); })
-                        / data.size();
+                        / data.nrows;
         cout << "Quantization Error " << Qe << endl;
 */
     }

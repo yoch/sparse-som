@@ -89,7 +89,6 @@ private:
 
     double* codebook;
     double* squared_sum;
-    double* data_squared_sum;
     double* w_coeff;
     double * wvprod;
 };
@@ -140,7 +139,6 @@ private:
     int m_verbose;
 
     float* codebook;
-    float* data_squared_sum;
 };
 
 }

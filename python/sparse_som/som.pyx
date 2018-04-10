@@ -1,11 +1,6 @@
 # distutils: language = c++
-# distutils: sources = lib/bsom.cpp, lib/som.cpp, lib/sparse_vec.cpp
+# distutils: sources = lib/bsom.cpp, lib/som.cpp
 
-from libc.stdint cimport uint32_t, int32_t
-from libc.stdlib cimport malloc, free
-from libcpp cimport bool as bool_t
-from libcpp.vector cimport vector
-#from libcpp.string cimport string
 
 cimport cython
 cimport numpy as np
@@ -15,68 +10,54 @@ import scipy.sparse
 
 
 
-cdef extern from "lib/sparse_vec.h":
-    cdef cppclass cell:
-        uint32_t idx
-        float val
-    cdef cppclass sparse_vec:
-        sparse_vec()
-        void normalize()
-        void clear()
-        size_t size()
-        void push_back(cell&)
+cdef extern from "lib/data.h":
+    cdef cppclass CSR:
+        float * data
+        int * indices
+        int * indptr
+        float * _sqsum
+        int nrows
+        int ncols
+        int nnz
 
 
-## more generic, but too slow
-#@cython.boundscheck(False) # turn off bounds-checking for entire function
-#@cython.wraparound(False)  # turn off negative index wrapping for entire function
-#cdef sparse_matrix_from_scipy_old(vector[sparse_vec]& m, sm):
-#    "convert scipy.sparse matrix to internal sparse representation"
-#    cdef sparse_vec v
-#    cdef cell c
-#    cdef int32_t i, j, k, lasti = 0
-#    cdef np.ndarray[int32_t, ndim=1] X
-#    cdef np.ndarray[int32_t, ndim=1] Y
-#    Y, X = sm.nonzero()
-#    for k in range(len(Y)):
-#        i = Y[k]
-#        j = X[k]
-#        c.idx = j
-#        c.val = sm[i,j]
-#        if i != lasti:
-#            m.push_back(v)
-#            lasti = i
-#            v.clear()
-#        v.push_back(c)
-#        #print((i, j), c.val, v.size(), m.size())
-#    m.push_back(v)
+cdef CSR csrmat_from_spsparse(sm):
+    "convert scipy.sparse.spmatrix to internal csr wrapper"   
+    # ensure that sm is in the correct format
+    ensure_validity(sm)
+    # retrieve refs on internal array
+    cdef np.ndarray[float, ndim=1] data = sm.data
+    cdef np.ndarray[int, ndim=1] indices = sm.indices
+    cdef np.ndarray[int, ndim=1] indptr = sm.indptr
+    # convert to internal representation
+    cdef CSR csr
+    csr.data = <float*> data.data
+    csr.indices = <int*> indices.data
+    csr.indptr = <int*> indptr.data
+    csr.nrows = sm.shape[0]
+    csr.ncols = sm.shape[1]
+    csr.nnz = sm.nnz
+    return csr
 
 
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef sparse_matrix_from_scipy(vector[sparse_vec]& m, sm):
-    "convert scipy.sparse.spmatrix to internal sparse representation"
+def ensure_validity(sm):
     # sanity checks
-    assert isinstance(sm, scipy.sparse.spmatrix)
-    if not isinstance(sm, scipy.sparse.csr_matrix):
-        sm = sm.tocsr()
+    assert scipy.sparse.isspmatrix_csr(sm), "data must be at CSR format"
+    #if not scipy.sparse.isspmatrix(sm):
+    #    print("convert to CSR")
+    #    sm = csr_matrix(sm, dtype=np.single)
+    #if not scipy.sparse.isspmatrix_csr(sm):
+    #    print("convert to CSR")
+    #    sm = sm.tocsr()
+    if not sm.dtype == np.single:
+        #HACK: modify sm in place, 
+        #      (works but this is undocumented)
+        print("convert %s to float" % sm.dtype)
+        sm.data = sm.data.astype(np.single)
     if not sm.has_sorted_indices:
         print("sorting indices")
         sm.sort_indices()
-    # convert to internal representation
-    cdef sparse_vec v
-    cdef cell c
-    cdef np.ndarray[float, ndim=1] data = sm.data.astype(np.float32, copy=False)
-    cdef np.ndarray[int32_t, ndim=1] indices = sm.indices
-    cdef np.ndarray[int32_t, ndim=1] indptr = sm.indptr
-    cdef int32_t i, j
-    for i in range(len(indptr)-1):
-        for j in range(indptr[i], indptr[i+1]):
-            c.idx = indices[j]
-            c.val = data[j]
-            v.push_back(c)
-        m.push_back(v)
-        v.clear()
+    return sm
 
 
 
@@ -92,8 +73,8 @@ cdef extern from "lib/som.h" namespace "som":
 
     cdef cppclass _BSom "som::BSom":
         _BSom(size_t, size_t, size_t, topology, int)
-        void train(const vector[sparse_vec]&, size_t, float, float, float, cooling)
-        void getBmus(const vector[sparse_vec]&, size_t *, float *)
+        void train(const CSR&, size_t, float, float, float, cooling)
+        void getBmus(const CSR&, size_t *, float *)
         size_t getx()
         size_t gety()
         size_t getz()
@@ -101,7 +82,7 @@ cdef extern from "lib/som.h" namespace "som":
 
     cdef cppclass _Som "som::Som":
         _Som(size_t, size_t, size_t, topology, int)
-        void train(const vector[sparse_vec]&, size_t, double, double, double, double, double, cooling, cooling)
+        void train(const CSR&, size_t, double, double, double, double, double, cooling, cooling)
         size_t getx()
         size_t gety()
         size_t getz()
@@ -137,7 +118,7 @@ cdef class BSom:
         """\
         Train the network with data.
 
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
         :type data: :class:`scipy.sparse.spmatrix`
         :param epochs: number of epochs
         :type epochs: int
@@ -150,36 +131,36 @@ cdef class BSom:
         """
         if r0 == 0:
             r0 = min(self.c_som.gety(), self.c_som.getx()) / 2
-        cdef vector[sparse_vec] m
-        sparse_matrix_from_scipy(m, data)
+        cdef CSR m = csrmat_from_spsparse(data)
         self.c_som.train(m, epochs, r0, rN, std, cool)
 
     def _dst_argmin_min(self, data):
         """\
-        Return the best match units for data.
-
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
-        :type data: :class:`scipy.sparse.spmatrix`
-        :returns: an array of the bmus coordinates (y,x)
-        :rtype: 2D :class:`numpy.ndarray`
+        Allow to compute QE
         """
-        cdef vector[sparse_vec] m
-        sparse_matrix_from_scipy(m, data)
-        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.size(), dtype=np.uintp)
-        cdef np.ndarray[float, ndim=1] mdst = np.empty(m.size(), dtype=np.single)
+        cdef CSR m = csrmat_from_spsparse(data)
+        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
+        cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
         self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data)
-        return bmus, np.sqrt(mdst)
+        # correct min dist, because we use external CSR without _sqsum
+        mdst += data.power(2).sum(axis=1).A1
+        np.clip(mdst, 0, None, mdst)
+        np.sqrt(mdst, mdst)
+        return bmus, mdst
 
     def bmus(self, data):
         """\
         Return the best match units for data.
 
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
         :type data: :class:`scipy.sparse.spmatrix`
         :returns: an array of the bmus coordinates (y,x)
         :rtype: 2D :class:`numpy.ndarray`
         """
-        bmus, _ = self._dst_argmin_min(data)
+        cdef CSR m = csrmat_from_spsparse(data)
+        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
+        cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
+        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data)
         YX = np.unravel_index(bmus, (self.nrows, self.ncols))
         return np.vstack(YX).transpose()
 
@@ -204,9 +185,9 @@ cdef class BSom:
         """
         y, x, z = self.c_som.gety(), self.c_som.getx(), self.c_som.getz()
         assert (y, x, z) == arr.shape
-        if arr.dtype != np.float32:
-            print('changing codebook type to float32')
-            arr = arr.astype(np.float32)
+        if arr.dtype != np.single:
+            print('changing codebook type to float')
+            arr = arr.astype(np.single)
         cdef float* data = self.c_som._codebookptr()
         cdef view.array view = <float[:y,:x,:z]> data
         view[:,:,:] = arr.data
@@ -264,7 +245,7 @@ cdef class Som:
         """\
         Train the network with data.
 
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
         :type data: :class:`scipy.sparse.spmatrix`
         :param tmax: number of iterations
         :type tmax: int
@@ -285,8 +266,7 @@ cdef class Som:
             r0 = min(self.c_som.gety(), self.c_som.getx()) / 2
         if tmax is None:
             tmax = 10 * data.shape[0]
-        cdef vector[sparse_vec] m
-        sparse_matrix_from_scipy(m, data)
+        cdef CSR m = csrmat_from_spsparse(data)
         self.c_som.train(m, tmax, r0, a0, rN, aN, std, rcool, acool)
 
     def _dst_argmin_min(self, data):
@@ -299,14 +279,15 @@ cdef class Som:
         codebook.shape = shape
         bmus = dst.argmin(axis=1)
         mdst = dst.min(axis=1)
-        mdst[mdst<0] = 0
-        return bmus, np.sqrt(mdst)
+        np.clip(mdst, 0, None, mdst)
+        np.sqrt(mdst, mdst)
+        return bmus, mdst
 
     def bmus(self, data):
         """\
         Return the best match units for data.
 
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
         :type data: :class:`scipy.sparse.spmatrix`
         :returns: an array of the bmus coordinates (y,x)
         :rtype: 2D :class:`numpy.ndarray`
@@ -340,8 +321,8 @@ cdef class Som:
             print('changing codebook type to float64')
             arr = arr.astype(np.float64)
         cdef double * data = self.c_som._codebookptr()
-        cdef view.array view = <double[:y,:x,:z]> data
-        view[:,:,:] = arr.data
+        cdef view.array vdata = <double[:y,:x,:z]> data
+        vdata[:,:,:] = arr.data
 
     @property
     def nrows(self):
