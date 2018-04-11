@@ -36,7 +36,7 @@ static void usage(const char* name)
 
 int main(int argc, char *argv[])
 {
-    int x=-1, y=-1, ncols=-1, tmax=-1, tcoef=-1, n;
+    int x=-1, y=-1, tmax=-1, tcoef=-1, n;
     double r0=-1, rN=FLT_MIN, a0=0.5, aN=FLT_MIN, sc=0.3;
     som::topology neigh = som::RECT;
     som::cooling acool=som::LINEAR, rcool=som::LINEAR;
@@ -159,7 +159,6 @@ int main(int argc, char *argv[])
     try
     {
         dataSet = dataset(filename, zerobased ? 0 : 1);
-        ncols = dataSet.nfeatures();
     }
     catch(string& err)
     {
@@ -175,8 +174,9 @@ int main(int argc, char *argv[])
         cout << "OK (" << wtime << "s)" << endl;
         if (verbose > 1)
         {
-            cout << "  " << dataSet.nsamples() << " vectors read" << endl;
-            cout << "  " << ncols << " features" << endl;
+            cout << "  " << dataSet.nrows << " rows" << endl;
+            cout << "  " << dataSet.ncols << " cols" << endl;
+            cout << "  " << dataSet.nnz << " nnz" << endl;
         }
     }
 
@@ -197,13 +197,13 @@ int main(int argc, char *argv[])
 
     if (tmax==-1)
     {
-        tmax = ((tcoef==-1) ? 10 : tcoef) * dataSet.nsamples();
+        tmax = ((tcoef==-1) ? 10 : tcoef) * dataSet.nrows;
     }
 
 
     som::Som som = load ?
                 som::Som(loadfile, neigh, verbose) :
-                som::Som(y, x, ncols, neigh, verbose);
+                som::Som(y, x, dataSet.ncols, neigh, verbose);
 
     if (r0==-1)
     {

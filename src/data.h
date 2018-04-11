@@ -33,9 +33,6 @@ public:
     // load from filename
     dataset(const std::string& filename, int offset=0);
 
-    size_t nfeatures() const { return ncols; }
-    size_t nsamples() const { return nrows; }
-
     std::vector<std::string> labels;
 
 private:

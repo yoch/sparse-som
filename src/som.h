@@ -70,6 +70,9 @@ public:
     inline size_t getz() const {return m_dim;}
     inline double* _codebookptr() const {return codebook;}
 
+    inline int getverb() const {return m_verbose;}
+    inline void setverb(int v) {m_verbose = v;}
+
 
 private:
 
@@ -119,6 +122,8 @@ public:
     inline size_t getz() const {return m_dim;}
     inline float* _codebookptr() const {return codebook;}
 
+    inline int getverb() const {return m_verbose;}
+    inline void setverb(int v) {m_verbose = v;}
 
 private:
 

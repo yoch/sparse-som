@@ -79,6 +79,8 @@ cdef extern from "lib/som.h" namespace "som":
         size_t gety()
         size_t getz()
         float * _codebookptr()
+        int getverb()
+        void setverb(int)
 
     cdef cppclass _Som "som::Som":
         _Som(size_t, size_t, size_t, topology, int)
@@ -87,6 +89,8 @@ cdef extern from "lib/som.h" namespace "som":
         size_t gety()
         size_t getz()
         double * _codebookptr()
+        int getverb()
+        void setverb(int)
 
 
 cdef class BSom:
@@ -215,6 +219,14 @@ cdef class BSom:
         :rtype: int
         """
         return self.c_som.getz()
+
+    @property
+    def verbose(self):
+        return self.c_som.getverb()
+
+    @verbose.setter
+    def verbose(self, int v):
+        self.c_som.setverb(v)
 
 
 cdef class Som:
@@ -347,3 +359,11 @@ cdef class Som:
         :rtype: int
         """
         return self.c_som.getz()
+
+    @property
+    def verbose(self):
+        return self.c_som.getverb()
+
+    @verbose.setter
+    def verbose(self, int v):
+        self.c_som.setverb(v)

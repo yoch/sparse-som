@@ -386,14 +386,13 @@ void BSom::dumpSparse(const string& filename, double epsilon) const
 
 vector<label_counter> BSom::calibrate(const dataset& dataSet) const
 {
-    size_t * bmus = new size_t[dataSet.nsamples()];
-    float * dsts = new float[dataSet.nsamples()];
+    size_t * bmus = new size_t[dataSet.nrows];
+    float * dsts = new float[dataSet.nrows];
 
-    // BUG: ...
     getBmus(dataSet, bmus, dsts);
 
     vector<label_counter> mappings = vector<label_counter>(m_height*m_width);
-    for (size_t k=0; k < dataSet.nsamples(); ++k)
+    for (int k=0; k < dataSet.nrows; ++k)
     {
         const size_t kStar = bmus[k];
         mappings[kStar][dataSet.labels[k]]++;

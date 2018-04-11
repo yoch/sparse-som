@@ -504,7 +504,7 @@ vector<label_counter> Som::calibrate(const dataset& dataSet) const
 {
     vector<label_counter> mappings = vector<label_counter>(m_height*m_width);
     vector<bmu> bmus = getBmus(dataSet);
-    for (size_t k=0; k < dataSet.nsamples(); ++k)
+    for (int k=0; k < dataSet.nrows; ++k)
     {
         const bmu & star = bmus[k];
         mappings[star.idx][dataSet.labels[k]]++;
