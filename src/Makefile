@@ -11,6 +11,10 @@ mk-som: build
 mk-bsom: build
 	make -C bsom/ all
 
+debug: build
+	make -C som/ debug
+	make -C bsom/ debug
+
 clean:
 	make -C som/ clean
 	make -C bsom/ clean
