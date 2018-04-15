@@ -159,19 +159,17 @@ int main(int argc, char *argv[])
         wtime = get_wall_time();
     }
 
-    dataset dataSet;
+    dataset dataSet(filename, zerobased ? 0 : 1);
+    assert(d == -1 || d >= dataSet.ncols);
 
-    try
-    {
-        dataSet = dataset(filename, zerobased ? 0 : 1);
-        assert(d == -1 || d >= dataSet.ncols);
-    }
+/*
     catch(string& err)
     {
         //cout << endl;
         cerr << err << endl;
         return -1;
     }
+*/
 
     if (verbose > 0)
     {

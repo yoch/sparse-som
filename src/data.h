@@ -28,6 +28,7 @@ public:
     dataset();
     dataset(const std::string& filename, int offset=0);     // load from filename
     dataset(const dataset&) = delete;                       // disable copy
+    dataset& operator=(const dataset&) = delete;            // disable assignment
     ~dataset()
     {
         if (_sqsum) delete [] _sqsum;
