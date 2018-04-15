@@ -13,6 +13,10 @@ bsom:
 #	$(CXX) $(CXXFLAGS) -Wno-unknown-pragmas -O2 -s $(SRC) -o $(BUILDDIR)/$(TARGET)	
 	$(CXX) $(CXXFLAGS) -O2 -s -fopenmp $(SRC) -o $(BUILDDIR)/$(TARGET)
 
+debug:
+#	$(CXX) $(CXXFLAGS) -Wno-unknown-pragmas -O2 -s $(SRC) -o $(BUILDDIR)/$(TARGET)	
+	$(CXX) $(CXXFLAGS) -Og -fopenmp $(SRC) -o $(BUILDDIR)/$(TARGET)-dbg
+
 #-mpc32 -march=native -mtune=native -ffast-math
 
 prof:
