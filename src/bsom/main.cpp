@@ -16,26 +16,27 @@ using namespace std;
 static void usage(const char* name)
 {
     cerr << "Usage: " << name << endl
-        << "\t-i infile - input file at libsvm sparse format" << endl
-        << "\t-y nrows  - number of rows in the codebook" << endl
-        << "\t-x ncols  - number of columns in the codebook" << endl
-        << "\t[ -u ] - one based column indices (default is zero based)" << endl
-        << "\t[ -N ] - normalize the input vectors" << endl
-        << "\t[ -l codebook ]   - load codebook from binary file" << endl
-        << "\t[ -o|O codebook ] - output codebook to filename (o:binary, O:text)" << endl
-        << "\t[ -c|C classes ]  - output classification (c:without counts, C:with counts)" << endl
-        << "\t[ -n neighborhood ] - neighborhood topology: 4=circ, 6=hexa, 8=rect (default 8)" << endl
-        << "\t[ -T epochs ] - number of epochs (default 10)" << endl
-        << "\t[ -r radius0 -R radiusN ] - radius at start and end (default r=(x+y)/2, R=0.5)" << endl
-        << "\t[ -H radiusCool ] - radius cooling: 0=linear, 1=exponential (default 0)" << endl
-        << "\t[ -s stdCoeff ]   - sigma = radius * coeff (default 0.3)" << endl
-        << "\t[ -v ] - increase verbosity level (default 0, max 2)" << endl;
+        << "\t-i infile        input file at libsvm sparse format" << endl
+        << "\t-y nrows         number of rows in the codebook" << endl
+        << "\t-x ncols         number of columns in the codebook" << endl
+        << "\t[ -d dim ]       force the dimension of codebook's vectors" << endl
+        << "\t[ -u ]           one based column indices (default is zero based)" << endl
+        << "\t[ -N ]           normalize the input vectors" << endl
+        << "\t[ -l cb ]        load codebook from binary file" << endl
+        << "\t[ -o|O cb ]      output codebook to filename (o:binary, O:text)" << endl
+        << "\t[ -c|C cl ]      output classification (c:without counts, C:with counts)" << endl
+        << "\t[ -n neig ]      neighborhood topology: 4=circ, 6=hexa, 8=rect (default 8)" << endl
+        << "\t[ -T epoc ]      number of epochs (default 10)" << endl
+        << "\t[ -r r0 -R rN ]  radius at start and end (default r=(x+y)/2, R=0.5)" << endl
+        << "\t[ -H rCool ]     radius cooling: 0=linear, 1=exponential (default 0)" << endl
+        << "\t[ -s stdCf ]     sigma = radius * stdCf (default 0.3)" << endl
+        << "\t[ -v ]           increase verbosity level (default 0, max 2)" << endl;
     exit(-1);
 }
 
 int main(int argc, char *argv[])
 {
-    int x=-1, y=-1, tcoef=-1, n;
+    int x=-1, y=-1, d=-1, tcoef=-1, n;
     float r0=-1, rN=0.5, sc=0.3;
     som::topology neigh = som::RECT;
     som::cooling rcool = som::LINEAR;
@@ -47,7 +48,7 @@ int main(int argc, char *argv[])
 
     // Pase command line arguments
     int opt;
-    while ((opt = getopt(argc, argv, "i:o:O:l:C:c:x:y:t:T:r:R:a:A:s:n:Nuv")) != -1)
+    while ((opt = getopt(argc, argv, "i:o:O:l:C:c:x:y:d:t:T:r:R:a:A:s:n:Nuv")) != -1)
     {
         switch (opt) {
         case 'i':   // infile
@@ -77,6 +78,10 @@ int main(int argc, char *argv[])
         case 'y':
             y = atoi(optarg);
             assert(y>0);
+            break;
+        case 'd':
+            d = atoi(optarg);
+            assert(d>0);
             break;
         case 'T':   // epochs
             tcoef = atoi(optarg);
@@ -147,6 +152,7 @@ int main(int argc, char *argv[])
     try
     {
         dataSet = dataset(filename, zerobased ? 0 : 1);
+        assert(d == -1 || d >= dataSet.ncols);
     }
     catch(string& err)
     {
@@ -190,7 +196,7 @@ int main(int argc, char *argv[])
 
     som::BSom som = load ?
                 som::BSom(loadfile, neigh, verbose) :
-                som::BSom(y, x, dataSet.ncols, neigh, verbose);
+                som::BSom(y, x, d==-1 ? dataSet.ncols : d, neigh, verbose);
 
     if (r0==-1)
     {

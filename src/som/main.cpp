@@ -15,28 +15,29 @@ using namespace std;
 static void usage(const char* name)
 {
     cerr << "Usage: " << name << endl
-        << "\t-i infile - input file at libsvm sparse format" << endl
-        << "\t-y nrows  - number of rows in the codebook" << endl
-        << "\t-x ncols  - number of columns in the codebook" << endl
-        << "\t[ -u ] - one based column indices (default is zero based)" << endl
-        << "\t[ -N ] - normalize the input vectors" << endl
-        << "\t[ -l codebook ]   - load codebook from binary file" << endl
-        << "\t[ -o|O codebook ] - output codebook to filename (o:binary, O:text)" << endl
-        << "\t[ -c|C classes ]  - output classification (c:without counts, C:with counts)" << endl
-        << "\t[ -n neighborhood ] - neighborhood topology: 4=circ, 6=hexa, 8=rect (default 8)" << endl
-        << "\t[ -t tmax | -T epochs ]   - number of training iterations (epoch=nb. of samples)" << endl
-        << "\t[ -r radius0 -R radiusN ] - radius at start and end (default r=(x+y)/2, R=0.5)" << endl
-        << "\t[ -a alpha0  -A  alphaN ] - learning rate at start and end (default a=0.5, A=1.e-37)" << endl
-        << "\t[ -H radiusCool ] - radius cooling: 0=linear, 1=exponential (default 0)" << endl
-        << "\t[ -h  alphaCool ] - alpha cooling: 0=linear, 1=exponential (default 0)" << endl
-        << "\t[ -s stdCoeff ]   - sigma = radius * coeff (default 0.3)" << endl
-        << "\t[ -v ] - increase verbosity level (default 0, max 2)" << endl;
+        << "\t-i infile        input file at libsvm sparse format" << endl
+        << "\t-y nrows         number of rows in the codebook" << endl
+        << "\t-x ncols         number of columns in the codebook" << endl
+        << "\t[ -d dim ]       force the dimension of codebook's vectors" << endl
+        << "\t[ -u ]           one based column indices (default is zero based)" << endl
+        << "\t[ -N ]           normalize the input vectors" << endl
+        << "\t[ -l cb ]        load codebook from binary file" << endl
+        << "\t[ -o|O cb ]      output codebook to filename (o:binary, O:text)" << endl
+        << "\t[ -c|C cl ]      output classification (c:without counts, C:with counts)" << endl
+        << "\t[ -n neig ]      neighborhood topology: 4=circ, 6=hexa, 8=rect (default 8)" << endl
+        << "\t[ -t n | -T e ]  number of training iterations or epochs (epoch = nrows)" << endl
+        << "\t[ -r r0 -R rN ]  radius at start and end (default r=(x+y)/2, R=0.5)" << endl
+        << "\t[ -a a0 -A aN ]  learning rate at start and end (default a=0.5, A=1.e-37)" << endl
+        << "\t[ -H rCool ]     radius cooling: 0=linear, 1=exponential (default 0)" << endl
+        << "\t[ -h aCool ]     alpha cooling: 0=linear, 1=exponential (default 0)" << endl
+        << "\t[ -s stdCf ]     sigma = radius * stdCf (default 0.3)" << endl
+        << "\t[ -v ]           increase verbosity level (default 0, max 2)" << endl;
     exit(-1);
 }
 
 int main(int argc, char *argv[])
 {
-    int x=-1, y=-1, tmax=-1, tcoef=-1, n;
+    int x=-1, y=-1, d=-1, tmax=-1, tcoef=-1, n;
     double r0=-1, rN=FLT_MIN, a0=0.5, aN=FLT_MIN, sc=0.3;
     som::topology neigh = som::RECT;
     som::cooling acool=som::LINEAR, rcool=som::LINEAR;
@@ -48,7 +49,7 @@ int main(int argc, char *argv[])
 
     // Pase command line arguments
     int opt;
-    while ((opt = getopt(argc, argv, "i:o:O:l:C:c:x:y:t:T:r:R:a:A:s:n:h:H:Nuv")) != -1)
+    while ((opt = getopt(argc, argv, "i:o:O:l:C:c:x:y:d:t:T:r:R:a:A:s:n:h:H:Nuv")) != -1)
     {
         switch (opt) {
         case 'i':   // infile
@@ -78,6 +79,10 @@ int main(int argc, char *argv[])
         case 'y':
             y = atoi(optarg);
             assert(y>0);
+            break;
+        case 'd':
+            d = atoi(optarg);
+            assert(d>0);
             break;
         case 't':   // Tmax
             assert(tcoef==-1);
@@ -159,6 +164,7 @@ int main(int argc, char *argv[])
     try
     {
         dataSet = dataset(filename, zerobased ? 0 : 1);
+        assert(d == -1 || d >= dataSet.ncols);
     }
     catch(string& err)
     {
@@ -203,7 +209,7 @@ int main(int argc, char *argv[])
 
     som::Som som = load ?
                 som::Som(loadfile, neigh, verbose) :
-                som::Som(y, x, dataSet.ncols, neigh, verbose);
+                som::Som(y, x, d == -1 ? dataSet.ncols : d, neigh, verbose);
 
     if (r0==-1)
     {
