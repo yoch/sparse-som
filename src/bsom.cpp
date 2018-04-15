@@ -186,13 +186,13 @@ void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts, siz
 
         for (idx_t i=0; i < (idx_t) data.nrows; ++i)
         {
-            const size_t ind = data.indptr[i];
-            const size_t vsz = data.indptr[i+1] - ind;
+            const int ind = data.indptr[i];
+            const int vsz = data.indptr[i+1] - ind;
             const float * const vsp = &data.data[ind];
             const int * const vind = &data.indices[ind];
 
             // pseudo squared distance, d_i = d_i + X_i^2
-            const float dst = w2 - 2 * prod(vsp, vind, vsz, w); //euclideanDistanceSq(vsp, vind, vsz, w, w2);
+            const float dst = w2 - 2 * prod(vsp, vind, vsz, w);
 
             if (!second)
             {
@@ -240,8 +240,8 @@ void BSom::update(const CSR& data, const float radius, const float stdCoef, size
 
         for (size_t n=0; n < (size_t) data.nrows; ++n)
         {
-            const size_t ind = data.indptr[n];
-            const size_t vsz = data.indptr[n+1] - ind;
+            const int ind = data.indptr[n];
+            const int vsz = data.indptr[n+1] - ind;
             const float * const vsp = &data.data[ind];
             const int * const vind = &data.indices[ind];
 
@@ -250,35 +250,13 @@ void BSom::update(const CSR& data, const float radius, const float stdCoef, size
 
             double d2;
 
-/*
-            bool so_far = true;
-            float d2, x6, j6;
-            switch (m_topo)
-            {
-            case CIRC:
-                d2 = squared(i-y) + squared(j-x);
-                so_far = d2 > squared(radius+1);
-                break;
-            case HEXA:
-                x6 = (x&1) ? 0.5 + x : x;
-                j6 = (j&1) ? 0.5 + j : j;
-                d2 = squared((i-y)*HEX_H) + squared(j6-x6);
-                so_far = d2 > squared(radius+1);
-                break;
-            case RECT:
-            default:
-                d2 = squared(i-y) + squared(j-x);
-                so_far = max(abs(i-y),(j-x)) > radius+1;
-                break;
-            }
-*/
             if (fdist(y, x, i, j, d2) > radius+1)
                 continue;
 
             const float h = exp(-d2 / (2 * squared(radius * stdCoef)));
 
             denominator += h;
-            for (size_t it=0; it<vsz; ++it)
+            for (int it=0; it<vsz; ++it)
             {
                 numerator[vind[it]] += h * vsp[it];
             }
@@ -295,6 +273,25 @@ void BSom::update(const CSR& data, const float radius, const float stdCoef, size
     }
     delete [] numerator;
  }
+}
+
+double BSom::topographicError(size_t * const bmus, size_t * const second, size_t n) const
+{
+    size_t errors = 0;
+    for (size_t k=0; k<n; ++k)
+    {
+        double d2;
+        const int y = bmus[k] / m_width,
+                  x = bmus[k] % m_width,
+                  i = second[k] / m_width,
+                  j = second[k] % m_width;
+        if (fdist(y, x, i, j, d2) > 1)
+        {
+            errors++;
+        }
+    }
+    //cout << endl << errors << " topographic errors on " << n << " samples" << endl;
+    return (double) errors / n;
 }
 
 void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
@@ -316,7 +313,7 @@ void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
 
     size_t * second = NULL;
     float * sdsts = NULL;
-    
+
     if (m_verbose > 1)
     {
         second = new size_t[data.nrows];
@@ -338,7 +335,7 @@ void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
         // unable to compute QE if we don't have X^2
         if (data._sqsum)
         {
-            float Qe = 0;
+            double Qe = 0;
             for (int i=0; i<data.nrows; ++i)
             {
                 Qe += sqrt(max(0.f, dsts[i] + data._sqsum[i]));
@@ -348,29 +345,16 @@ void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
             // Note: in fact, this is the quantization error of the previous step (before the update)
             cout << " - QE: " << Qe;
         }
-        
+
         if (second)
         {
-            float Te = 0.;
-            for (int n=0; n<data.nrows; ++n)
-            {
-                double d2;
-                const int y = bmus[n] / m_width,
-                          x = bmus[n] % m_width,
-                          i = second[n] / m_width,
-                          j = second[n] % m_width;
-                if (fdist(y, x, i, j, d2) > 1)
-                    Te++;
-            }
-            Te /= data.nrows;
-
             // Note: in fact, this is the topographic error of the previous step (before the update)
-            cout << " - TE: " << Te;
+            cout << " - TE: " << topographicError(bmus, second, data.nrows);
         }
 
         cout << endl;
     }
-    
+
     if (second) delete [] second;
     if (sdsts) delete [] sdsts;
 }
@@ -395,21 +379,51 @@ void BSom::train(const CSR& data, size_t tmax,
         trainOneEpoch(data, t, tmax, radius0, radiusN, stdCoef, rcool, bmus, dsts);
     }
 
-    delete [] bmus;
-    delete [] dsts;
-
     if (m_verbose > 0)
     {
+
+/* DBG
+        if (m_verbose > 1)
+        {
+            size_t * second = new size_t[data.nrows];
+            float * sdsts = new float[data.nrows];
+            
+            getBmus(data, bmus, dsts, second, sdsts);
+
+            // unable to compute QE if we don't have X^2
+            if (data._sqsum)
+            {
+                double Qe = 0;
+                for (int i=0; i<data.nrows; ++i)
+                {
+                    Qe += sqrt(max(0.f, dsts[i] + data._sqsum[i]));
+                }
+                Qe /= data.nrows;
+
+                // Note: in fact, this is the quantization error of the previous step (before the update)
+                cout << " - QE: " << Qe;
+            }
+
+            if (second)
+            {
+                // Note: in fact, this is the topographic error of the previous step (before the update)
+                cout << " - TE: " << topographicError(bmus, second, data.nrows);
+            }
+            
+            delete [] second;
+            delete [] sdsts;
+
+            cout << endl;
+        }
+*/
+
         tm = get_wall_time() - tm;
 
         cout << "Finished: elapsed " << tm << "s" << endl;
-/*
-        getBmus(data, bmus, dsts);
-        float Qe = accumulate(dsts, dsts+data.size(), 0.f, [](float acc, float val){ return acc + sqrt(max(val,0.f)); })
-                        / data.nrows;
-        cout << "Quantization Error " << Qe << endl;
-*/
     }
+    
+    delete [] bmus;
+    delete [] dsts;
 }
 
 void BSom::dump(const std::string& filename, bool binary) const

@@ -27,22 +27,48 @@ class SomClassifier:
         self._som.train(data, **kwargs)
         self._calibrate(data, labels)
 
-    def _calibrate(self, data, labels):
-        # HACK: retrieve bmus and distances
-        amin, dsts = self._som._dst_argmin_min(data)
-        shape = (self._som.nrows, self._som.ncols)
-        YX = np.unravel_index(amin, shape)
-        bmus = np.vstack(YX).transpose()
-        # metwork calibration
+    def _calibrate(self, data, labels, _bmus=None):
+        if _bmus is None:
+            _bmus = self.bmus(data)
+            print(_bmus)
+        # network calibration
         classifier = defaultdict(Counter)
-        for (i,j), label in zip(bmus, labels):
+        for (i,j), label in zip(_bmus, labels):
             classifier[i,j][label] += 1
         self.classifier = {}
         for ij, cnt in classifier.items():
             maxi = max(cnt.items(), key=itemgetter(1))
             nb = sum(cnt.values())
             self.classifier[ij] = maxi[0], maxi[1] / nb
-        return bmus, dsts
+        return _bmus
+
+    def error_metrics(self, data):
+        """\
+        Compute common error metrics (Quantization err. and Topographic err.)
+        for this data.
+
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
+        :type data: :class:`scipy.sparse.spmatrix`
+        :returns: the BMUs, the QE and the TE
+        :rtype: tuple
+        """
+        assert isinstance(self._som, som.BSom), 'Error metrics must use BSom classifier'
+        bmus, seconds, mdst, sdst = self._som._bmus_and_seconds(data)
+        # correct min dist, because we use external CSR without _sqsum
+        mdst += data.power(2).sum(axis=1).A1
+        np.clip(mdst, 0, None, mdst)
+        np.sqrt(mdst, mdst)
+        quantization_err = mdst.mean()
+        # BEWARE: rectangular dist only...
+        shape = (self._som.nrows, self._som.ncols)
+        #y1, x1 = np.unravel_index(bmus, shape)
+        #y2, x2 = np.unravel_index(seconds, shape)
+        #dy = abs(y1 - y2)
+        #dx = abs(x1 - x2)
+        #topographic_err = (np.maximum(dy, dx) > 1).mean()
+        topographic_err = self._som._topographic_error(bmus, seconds, data.shape[0])
+        YX = np.unravel_index(bmus, shape)
+        return np.vstack(YX).T, quantization_err, topographic_err
 
     def predict(self, data, unkown=None, _bmus=None):
         """\

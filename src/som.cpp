@@ -247,31 +247,12 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
               stopI = min((int)m_height-1,y+r),
               startJ = max(0,x-r),
               stopJ = min((int)m_width-1,x+r);
-    const size_t ind = data.indptr[n];
-    const size_t vsz = data.indptr[n+1] - ind;
+
+    const int ind = data.indptr[n];
+    const int vsz = data.indptr[n+1] - ind;
     const float * const vsp = &data.data[ind];
     const int * const vind = &data.indices[ind];
 
-    double d2; //, d2max;
-/*
-    switch (m_topo)
-    {
-    case CIRC:
-        //d2 = squared(i-y) + squared(j-x);
-        d2max = squared(radius);
-        break;
-    case HEXA:
-        //d2 = squared(j-x) + squared(i6-y6);
-        d2max = 1.25 * squared(radius);
-        break;
-    case RECT:
-    default:
-        //d2 = squared(i-y) + squared(j-x);
-        d2max = squared(radius*SQRT2);
-        break;
-    }
-*/
-    
 //#pragma omp parallel for collapse(2)
     //schedule(static,stopJ-startJ+1)
     //if ((stopI-startI)*(stopJ-startJ)>=100)
@@ -279,29 +260,28 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
     {
         for(int j = startJ; j <= stopJ; ++j)
         {
+            double d2;
+
             if (fdist(y, x, i, j, d2) > radius+1)
                 continue;
 
-            //if (d2 <= d2max)
+            const size_t idx = i * m_width + j;
+            const double neighborhood = exp(-d2 / (2 * squared(radius * stdCoeff)));
+            const double a = alpha * neighborhood;
+            const double b = 1. - a; // beware, if b==0 then calculus goes wrong
+
+            // calculate and store {w_{t+1}}^2
+            squared_sum[idx] = squared(b) * squared_sum[idx] +
+                               2 * a * b * w_coeff[idx] * wvprod[idx] +
+                               squared(a) * data._sqsum[n];
+
+            w_coeff[idx] *= b;  // do that before using in expression below
+
+            partial_update(vsp, vind, vsz, codebook + idx * m_dim, a / w_coeff[idx]);
+
+            if (w_coeff[idx] < EPSILON)
             {
-                const size_t idx = i * m_width + j;
-                const double neighborhood = exp(-d2 / (2 * squared(radius * stdCoeff)));
-                const double a = alpha * neighborhood;
-                const double b = 1. - a; // beware, if b==0 then calculus goes wrong
-
-                // calculate and store {w_{t+1}}^2
-                squared_sum[idx] = squared(b) * squared_sum[idx] +
-                                   2 * a * b * w_coeff[idx] * wvprod[idx] +
-                                   squared(a) * data._sqsum[n];
-
-                w_coeff[idx] *= b;  // do that before using in expression below
-
-                partial_update(vsp, vind, vsz, codebook + idx * m_dim, a / w_coeff[idx]);
-
-                if (w_coeff[idx] < EPSILON)
-                {
-                    stabilize(idx);
-                }
+                stabilize(idx);
             }
         }
     }
@@ -322,8 +302,8 @@ vector<bmu> Som::getBmus(const CSR& data) const
 
         for (idx_t i=0; i < (idx_t) data.nrows; ++i)
         {
-            const size_t ind = data.indptr[i];
-            const size_t vsz = data.indptr[i+1] - ind;
+            const int ind = data.indptr[i];
+            const int vsz = data.indptr[i+1] - ind;
             const double dst = euclideanDistanceSq(&data.data[ind], &data.indices[ind], vsz, data._sqsum[i], w, squared_sum[k], w_coeff[k]);
 
             if (dst < bmus[i].dst)

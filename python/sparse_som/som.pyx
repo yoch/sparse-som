@@ -74,7 +74,8 @@ cdef extern from "lib/som.h" namespace "som":
     cdef cppclass _BSom "som::BSom":
         _BSom(size_t, size_t, size_t, topology, int)
         void train(const CSR&, size_t, float, float, float, cooling)
-        void getBmus(const CSR&, size_t *, float *)
+        void getBmus(const CSR&, size_t *, float *, size_t *, float *)
+        double topographicError(size_t * const bmus, size_t * const second, size_t n)
         size_t getx()
         size_t gety()
         size_t getz()
@@ -138,19 +139,6 @@ cdef class BSom:
         cdef CSR m = csrmat_from_spsparse(data)
         self.c_som.train(m, epochs, r0, rN, std, cool)
 
-    def _dst_argmin_min(self, data):
-        """\
-        Allow to compute QE
-        """
-        cdef CSR m = csrmat_from_spsparse(data)
-        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
-        cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
-        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data)
-        # correct min dist, because we use external CSR without _sqsum
-        mdst += data.power(2).sum(axis=1).A1
-        np.clip(mdst, 0, None, mdst)
-        np.sqrt(mdst, mdst)
-        return bmus, mdst
 
     def bmus(self, data):
         """\
@@ -164,9 +152,29 @@ cdef class BSom:
         cdef CSR m = csrmat_from_spsparse(data)
         cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
         cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
-        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data)
+        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, NULL, NULL)
         YX = np.unravel_index(bmus, (self.nrows, self.ncols))
         return np.vstack(YX).transpose()
+
+    def _bmus_and_seconds(self, data):
+        """\
+        Return the best match units for data.
+
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
+        :type data: :class:`scipy.sparse.spmatrix`
+        :returns: an array of the bmus coordinates (y,x)
+        :rtype: 2D :class:`numpy.ndarray`
+        """
+        cdef CSR m = csrmat_from_spsparse(data)
+        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
+        cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
+        cdef np.ndarray[size_t, ndim=1] seconds = np.empty(m.nrows, dtype=np.uintp)
+        cdef np.ndarray[float, ndim=1] sdst = np.empty(m.nrows, dtype=np.single)
+        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, <size_t*> seconds.data, <float*> sdst.data)
+        return bmus, seconds, mdst, sdst        
+
+    def _topographic_error(self, np.ndarray[size_t, ndim=1] bmus, np.ndarray[size_t, ndim=1] seconds, int nsamples):
+        return self.c_som.topographicError(<size_t*> bmus.data, <size_t*> seconds.data, nsamples)
 
     @property
     def codebook(self):

@@ -136,6 +136,7 @@ public:
                float r0, float rN=0.f, float stdCoef=0.3, cooling rc=LINEAR);
 
     void getBmus(const CSR&, size_t * const bmus, float * const dsts, size_t * const second=NULL, float * const sdsts=NULL) const;
+    double topographicError(size_t * const bmus, size_t * const second, size_t n) const;
     std::vector<label_counter> calibrate(const dataset& dataSet) const;
 
     // IO gestion
