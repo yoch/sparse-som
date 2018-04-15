@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <string>
 #include <cfloat>
+#include <cmath>
 #include <chrono>
 
 // helper
@@ -20,6 +21,30 @@ inline double get_wall_time()
 {
     return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
 }
+
+
+#define HEX_H 0.8660254037844386
+
+inline double eucdist (int y, int x, int i, int j, double & d2)
+{
+    d2 = squared(i-y) + squared(j-x);
+    return std::sqrt(d2);
+}
+
+inline double eucdist_hexa(int y, int x, int i, int j, double & d2)
+{
+    double x6 = (x&1) ? 0.5 + x : x;
+    double j6 = (j&1) ? 0.5 + j : j;
+    d2 = squared((i-y)*HEX_H) + squared(j6-x6);
+    return std::sqrt(d2);
+}
+
+inline double manhatan_dist(int y, int x, int i, int j, double & d2)
+{
+    d2 = squared(i-y) + squared(j-x); // regular d^2
+    return std::max(std::abs(i-y),std::abs(j-x));
+}
+
 
 namespace som {
 
@@ -89,6 +114,7 @@ private:
 
     topology m_topo;
 	int m_verbose;
+    double (*fdist) (int, int, int, int, double&);
 
     double* codebook;
     double* squared_sum;
@@ -109,7 +135,7 @@ public:
     void train(const CSR&, size_t tcoef,
                float r0, float rN=0.f, float stdCoef=0.3, cooling rc=LINEAR);
 
-    void getBmus(const CSR&, size_t * const bmus, float * const dsts) const;
+    void getBmus(const CSR&, size_t * const bmus, float * const dsts, size_t * const second=NULL, float * const sdsts=NULL) const;
     std::vector<label_counter> calibrate(const dataset& dataSet) const;
 
     // IO gestion
@@ -142,6 +168,7 @@ private:
 
     topology m_topo;
     int m_verbose;
+    double (*fdist) (int, int, int, int, double&);
 
     float* codebook;
 };

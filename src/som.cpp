@@ -43,6 +43,20 @@ Som::Som(size_t h, size_t w, size_t d, topology topo, int verbose) :
     m_topo(topo),
     m_verbose(verbose)
 {
+    switch (m_topo)
+    {
+    case CIRC:
+        fdist = eucdist;
+        break;
+    case HEXA:
+        fdist = eucdist_hexa;
+        break;
+    case RECT:
+    default:
+        fdist = manhatan_dist;
+        break;
+    }
+
     codebook = new double[h*w*d];
 
     // randomly init values
@@ -53,6 +67,20 @@ Som::Som(const std::string& filename, topology topo, int verbose) :
     m_topo(topo),
     m_verbose(verbose)
 {
+    switch (m_topo)
+    {
+    case CIRC:
+        fdist = eucdist;
+        break;
+    case HEXA:
+        fdist = eucdist_hexa;
+        break;
+    case RECT:
+    default:
+        fdist = manhatan_dist;
+        break;
+    }
+
     ifstream myfile;
     myfile.open(filename, ios::binary);
 
@@ -224,6 +252,26 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
     const float * const vsp = &data.data[ind];
     const int * const vind = &data.indices[ind];
 
+    double d2; //, d2max;
+/*
+    switch (m_topo)
+    {
+    case CIRC:
+        //d2 = squared(i-y) + squared(j-x);
+        d2max = squared(radius);
+        break;
+    case HEXA:
+        //d2 = squared(j-x) + squared(i6-y6);
+        d2max = 1.25 * squared(radius);
+        break;
+    case RECT:
+    default:
+        //d2 = squared(i-y) + squared(j-x);
+        d2max = squared(radius*SQRT2);
+        break;
+    }
+*/
+    
 //#pragma omp parallel for collapse(2)
     //schedule(static,stopJ-startJ+1)
     //if ((stopI-startI)*(stopJ-startJ)>=100)
@@ -231,27 +279,10 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
     {
         for(int j = startJ; j <= stopJ; ++j)
         {
-            double d2, d2max, y6, i6;
-            switch (m_topo)
-            {
-            case CIRC:
-                d2 = squared(i-y) + squared(j-x);
-                d2max = squared(radius);
-                break;
-            case HEXA:
-                y6 = (y%2 == 0) ? 0.5 + y : y;
-                i6 = (i%2 == 0) ? 0.5 + i : i;
-                d2 = squared(j-x) + squared(i6-y6);
-                d2max = 1.25 * squared(radius);
-                break;
-            case RECT:
-            default:
-                d2 = squared(i-y) + squared(j-x);
-                d2max = squared(radius*SQRT2);
-                break;
-            }
+            if (fdist(y, x, i, j, d2) > radius+1)
+                continue;
 
-            if (d2 <= d2max)
+            //if (d2 <= d2max)
             {
                 const size_t idx = i * m_width + j;
                 const double neighborhood = exp(-d2 / (2 * squared(radius * stdCoeff)));

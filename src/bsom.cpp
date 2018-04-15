@@ -22,7 +22,7 @@ using namespace som;
 #endif
 
 
-#define HEX_H 0.8660254037844386
+//#define HEX_H 0.8660254037844386
 
 
 BSom::BSom(size_t h, size_t w, size_t d, topology topo, int verbose) :
@@ -32,7 +32,22 @@ BSom::BSom(size_t h, size_t w, size_t d, topology topo, int verbose) :
     m_topo(topo),
     m_verbose(verbose)
 {
+    switch (m_topo)
+    {
+    case CIRC:
+        fdist = eucdist;
+        break;
+    case HEXA:
+        fdist = eucdist_hexa;
+        break;
+    case RECT:
+    default:
+        fdist = manhatan_dist;
+        break;
+    }
+
     codebook = new float[h*w*d];
+
     init();
 }
 
@@ -40,6 +55,20 @@ BSom::BSom(const std::string& filename, topology topo, int verbose) :
     m_topo(topo),
     m_verbose(verbose)
 {
+    switch (m_topo)
+    {
+    case CIRC:
+        fdist = eucdist;
+        break;
+    case HEXA:
+        fdist = eucdist_hexa;
+        break;
+    case RECT:
+    default:
+        fdist = manhatan_dist;
+        break;
+    }
+
     ifstream myfile;
     myfile.open(filename, ios::binary);
 
@@ -135,10 +164,15 @@ void BSom::init()
   }
 }
 
-void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts) const
+void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts, size_t * const second, float * const sdsts) const
 {
     fill_n(bmus, data.nrows, 0);
     fill_n(dsts, data.nrows, FLT_MAX);
+    if (second)
+    {
+        fill_n(second, data.nrows, 0);
+        fill_n(sdsts, data.nrows, FLT_MAX);
+    }
 
     for (size_t k=0; k < m_height * m_width; ++k)
     {
@@ -148,7 +182,7 @@ void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts) con
         const float w2 = squared(w, m_dim);
 
 // ensure that two threads don't access shared data (at i index) at a time
-#pragma omp parallel for // shared(data,k)
+#pragma omp parallel for // shared(data,k,w2)
 
         for (idx_t i=0; i < (idx_t) data.nrows; ++i)
         {
@@ -160,10 +194,28 @@ void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts) con
             // pseudo squared distance, d_i = d_i + X_i^2
             const float dst = w2 - 2 * prod(vsp, vind, vsz, w); //euclideanDistanceSq(vsp, vind, vsz, w, w2);
 
-            if (dst < dsts[i])
+            if (!second)
             {
-                bmus[i] = k;
-                dsts[i] = dst;
+                if (dst < dsts[i])
+                {
+                    bmus[i] = k;
+                    dsts[i] = dst;
+                }
+            }
+            else // second!=NULL
+            {
+                if (dst < dsts[i])
+                {
+                    second[i] = bmus[i];
+                    sdsts[i] = dsts[i];
+                    bmus[i] = k;
+                    dsts[i] = dst;
+                }
+                else if (dst < sdsts[i])
+                {
+                    second[i] = k;
+                    sdsts[i] = dst;
+                }
             }
         }
     }
@@ -196,6 +248,9 @@ void BSom::update(const CSR& data, const float radius, const float stdCoef, size
             const int i = bmus[n] / m_width,
                       j = bmus[n] % m_width;
 
+            double d2;
+
+/*
             bool so_far = true;
             float d2, x6, j6;
             switch (m_topo)
@@ -216,8 +271,8 @@ void BSom::update(const CSR& data, const float radius, const float stdCoef, size
                 so_far = max(abs(i-y),(j-x)) > radius+1;
                 break;
             }
-
-            if (so_far)
+*/
+            if (fdist(y, x, i, j, d2) > radius+1)
                 continue;
 
             const float h = exp(-d2 / (2 * squared(radius * stdCoef)));
@@ -259,9 +314,18 @@ void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
         break;
     }
 
+    size_t * second = NULL;
+    float * sdsts = NULL;
+    
+    if (m_verbose > 1)
+    {
+        second = new size_t[data.nrows];
+        sdsts = new float[data.nrows];
+    }
+
     ///////////////////////////////////////////
     ///          Searching BMUs
-    getBmus(data, bmus, dsts);
+    getBmus(data, bmus, dsts, second, sdsts);
 
     //////////////////////////////////////////
     ///            Update phase
@@ -284,8 +348,31 @@ void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
             // Note: in fact, this is the quantization error of the previous step (before the update)
             cout << " - QE: " << Qe;
         }
+        
+        if (second)
+        {
+            float Te = 0.;
+            for (int n=0; n<data.nrows; ++n)
+            {
+                double d2;
+                const int y = bmus[n] / m_width,
+                          x = bmus[n] % m_width,
+                          i = second[n] / m_width,
+                          j = second[n] % m_width;
+                if (fdist(y, x, i, j, d2) > 1)
+                    Te++;
+            }
+            Te /= data.nrows;
+
+            // Note: in fact, this is the topographic error of the previous step (before the update)
+            cout << " - TE: " << Te;
+        }
+
         cout << endl;
     }
+    
+    if (second) delete [] second;
+    if (sdsts) delete [] sdsts;
 }
 
 void BSom::train(const CSR& data, size_t tmax,
