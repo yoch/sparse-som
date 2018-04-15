@@ -17,10 +17,6 @@ struct CSR
     int ncols;
     int nnz;
 
-    ~CSR()
-    {
-        if (_sqsum) delete [] _sqsum;
-    }
     void normalize();
 };
 
@@ -30,8 +26,12 @@ class dataset : public CSR
 public:
 
     dataset();
-    // load from filename
-    dataset(const std::string& filename, int offset=0);
+    dataset(const std::string& filename, int offset=0);     // load from filename
+    dataset(const dataset&) = delete;                       // disable copy
+    ~dataset()
+    {
+        if (_sqsum) delete [] _sqsum;
+    }
 
     std::vector<std::string> labels;
 
