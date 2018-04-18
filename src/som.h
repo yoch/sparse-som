@@ -157,8 +157,7 @@ private:
     void init();
     void update(const CSR& data, const float r, const float s, size_t * const bmus);
     //size_t getBmu(const sparse_vec& v, float& d) const;
-    void trainOneEpoch(const CSR&, size_t t, size_t tmax,
-                       float radius0, float radiusN, float stdCoef, cooling rc,
+    void trainOneEpoch(const CSR&, float radius, float stdCoef, 
                        size_t * const bmus, float * const dsts);
 
     /// attributes

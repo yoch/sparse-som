@@ -371,6 +371,7 @@ void Som::train(const CSR& data, size_t tmax,
 
     default_random_engine rng(time(NULL));
     uniform_int_distribution<size_t> uidist(0, data.nrows-1);
+
     for (size_t t=1; t <= tmax; ++t)
     {
         double radius, alpha;
@@ -401,16 +402,21 @@ void Som::train(const CSR& data, size_t tmax,
         // Get the best match unit
         double dStar;
         const size_t kStar = getBmu(data, k, dStar);
-        Qe += sqrt(dStar);
 
         // Update network
         update(data, k, kStar, radius, alpha, stdCoeff);
 
-        if (m_verbose > 1 && t % percent == 0)
+        if (m_verbose > 1)
         {
-            cout << "  " << t / percent << "% (" << t << " / " << tmax << ")"
-                 " - approx. QE " << Qe / percent << endl;
-			Qe = 0;
+            Qe += sqrt(dStar);  // approximated
+
+            if (t % percent == 0)
+            {
+                cout << "  " << t / percent << "% (" << t << " / " << tmax << ")"
+                    << " - r = " << radius << ", a = " << alpha
+                    << " - approx. QE " << Qe / percent << endl;
+                Qe = 0; // reinit Qe count
+            }
         }
     }
 

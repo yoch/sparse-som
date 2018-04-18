@@ -24,6 +24,8 @@ using namespace som;
 
 //#define HEX_H 0.8660254037844386
 
+//size_t SKIPPED = 0;
+
 
 BSom::BSom(size_t h, size_t w, size_t d, topology topo, int verbose) :
     m_height(h),
@@ -223,6 +225,8 @@ void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts, siz
 
 void BSom::update(const CSR& data, const float radius, const float stdCoef, size_t * const bmus)
 {
+//    SKIPPED = 0;
+
 #pragma omp parallel // shared(data)
  {
     float * const numerator = new float[m_dim];
@@ -270,6 +274,13 @@ void BSom::update(const CSR& data, const float radius, const float stdCoef, size
                 w[k] = numerator[k] / denominator;
             }
         }
+/*
+        else
+        {
+#pragma omp atomic
+            SKIPPED++;
+        }
+*/
     }
     delete [] numerator;
  }
@@ -294,22 +305,9 @@ double BSom::topographicError(size_t * const bmus, size_t * const second, size_t
     return (double) errors / n;
 }
 
-void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
-                        float radius0, float radiusN, float stdCoef, cooling rcool,
+void BSom::trainOneEpoch(const CSR& data, float radius, float stdCoef, 
                         size_t * const bmus, float * const dsts)
 {
-    float radius;
-    const float ratio = (float)(t-1) / (tmax-1);
-
-    switch (rcool) {
-    case EXPONENTIAL:
-        radius = radius0 * pow(radiusN / radius0, ratio);
-        break;
-    case LINEAR:
-    default:
-        radius = radiusN + (radius0 - radiusN) * (1. - ratio);
-        break;
-    }
 
     size_t * second = NULL;
     float * sdsts = NULL;
@@ -330,7 +328,6 @@ void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
 
     if (m_verbose > 1)
     {
-        cout << "  epoch " << t << " / " << tmax;
 
         // unable to compute QE if we don't have X^2
         if (data._sqsum)
@@ -348,11 +345,13 @@ void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
 
         if (second)
         {
-            // Note: in fact, this is the topographic error of the previous step (before the update)
             cout << " - TE: " << topographicError(bmus, second, data.nrows);
         }
 
+//        cout << "  (" << SKIPPED << " units skipped)";
+        // Note: in fact, this is the topographic error of the previous step (before the update)
         cout << endl;
+
     }
 
     if (second) delete [] second;
@@ -363,6 +362,7 @@ void BSom::train(const CSR& data, size_t tmax,
            float radius0, float radiusN, float stdCoef, cooling rcool)
 {
     double tm = 0.;
+    float radius;
 
     if (m_verbose > 0)
     {
@@ -376,7 +376,25 @@ void BSom::train(const CSR& data, size_t tmax,
 
     for (size_t t=1; t<=tmax; ++t)
     {
-        trainOneEpoch(data, t, tmax, radius0, radiusN, stdCoef, rcool, bmus, dsts);
+        const float ratio = (double)(t-1) / (tmax-1);
+
+        switch (rcool) {
+        case EXPONENTIAL:
+            radius = radius0 * powf(radiusN / radius0, ratio);
+            break;
+        case LINEAR:
+        default:
+            radius = radiusN + (radius0 - radiusN) * (1. - ratio);
+            break;
+        }
+
+        trainOneEpoch(data, radius, stdCoef, bmus, dsts);
+
+        if (m_verbose > 1)
+        {
+            cout << "  epoch " << t << " / " << tmax;
+            cout << ", r = " << radius;
+        }
     }
 
     if (m_verbose > 0)
