@@ -39,7 +39,7 @@ inline double eucdist_hexa(int y, int x, int i, int j, double & d2)
     return std::sqrt(d2);
 }
 
-inline double manhatan_dist(int y, int x, int i, int j, double & d2)
+inline double rectdist(int y, int x, int i, int j, double & d2)
 {
     d2 = squared(i-y) + squared(j-x); // regular d^2
     return std::max(std::abs(i-y),std::abs(j-x));
@@ -102,6 +102,7 @@ public:
 private:
 
     void init();
+    void setTopology(topology);
     void update(const CSR& data, size_t n, size_t k, double r, double a, double s);
     size_t getBmu(const CSR& data, const size_t n, double& d) const;
     void stabilize(size_t k);
@@ -155,6 +156,7 @@ public:
 private:
 
     void init();
+    void setTopology(topology);
     void update(const CSR& data, const float r, const float s, size_t * const bmus);
     //size_t getBmu(const sparse_vec& v, float& d) const;
     void trainOneEpoch(const CSR&, float radius, float stdCoef, 

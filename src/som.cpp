@@ -43,19 +43,7 @@ Som::Som(size_t h, size_t w, size_t d, topology topo, int verbose) :
     m_topo(topo),
     m_verbose(verbose)
 {
-    switch (m_topo)
-    {
-    case CIRC:
-        fdist = eucdist;
-        break;
-    case HEXA:
-        fdist = eucdist_hexa;
-        break;
-    case RECT:
-    default:
-        fdist = manhatan_dist;
-        break;
-    }
+    setTopology(topo);
 
     codebook = new double[h*w*d];
 
@@ -67,19 +55,7 @@ Som::Som(const std::string& filename, topology topo, int verbose) :
     m_topo(topo),
     m_verbose(verbose)
 {
-    switch (m_topo)
-    {
-    case CIRC:
-        fdist = eucdist;
-        break;
-    case HEXA:
-        fdist = eucdist_hexa;
-        break;
-    case RECT:
-    default:
-        fdist = manhatan_dist;
-        break;
-    }
+    setTopology(topo);
 
     ifstream myfile;
     myfile.open(filename, ios::binary);
@@ -134,6 +110,24 @@ Som::~Som()
     delete [] codebook;
 }
 
+void Som::setTopology(topology topo)
+{
+    m_topo = topo;
+
+    switch (m_topo)
+    {
+    case CIRC:
+        fdist = eucdist;
+        break;
+    case HEXA:
+        fdist = eucdist_hexa;
+        break;
+    case RECT:
+    default:
+        fdist = recdist;
+        break;
+    }
+}
 
 static double prod(const float * const vsp, const int * const ind, const size_t vsz, const double * const w)
 {

@@ -34,19 +34,7 @@ BSom::BSom(size_t h, size_t w, size_t d, topology topo, int verbose) :
     m_topo(topo),
     m_verbose(verbose)
 {
-    switch (m_topo)
-    {
-    case CIRC:
-        fdist = eucdist;
-        break;
-    case HEXA:
-        fdist = eucdist_hexa;
-        break;
-    case RECT:
-    default:
-        fdist = manhatan_dist;
-        break;
-    }
+    setTopology(topo);
 
     codebook = new float[h*w*d];
 
@@ -57,19 +45,7 @@ BSom::BSom(const std::string& filename, topology topo, int verbose) :
     m_topo(topo),
     m_verbose(verbose)
 {
-    switch (m_topo)
-    {
-    case CIRC:
-        fdist = eucdist;
-        break;
-    case HEXA:
-        fdist = eucdist_hexa;
-        break;
-    case RECT:
-    default:
-        fdist = manhatan_dist;
-        break;
-    }
+    setTopology(topo);
 
     ifstream myfile;
     myfile.open(filename, ios::binary);
@@ -117,6 +93,24 @@ BSom::~BSom()
     delete [] codebook;
 }
 
+void BSom::setTopology(topology topo)
+{
+    m_topo = topo;
+
+    switch (m_topo)
+    {
+    case CIRC:
+        fdist = eucdist;
+        break;
+    case HEXA:
+        fdist = eucdist_hexa;
+        break;
+    case RECT:
+    default:
+        fdist = recdist;
+        break;
+    }
+}
 
 static float prod(const float * const vsp, const int * const vind, const size_t vsz, const float * const w)
 {
