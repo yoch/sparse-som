@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
             break;
         case 'n':   // neighborhood
             n = atoi(optarg);
-            assert(n==4 || n==6 || n==8);
+            assert(n==1 || n==2 || n==4 || n==6 || n==8);
             neigh = static_cast<som::topology>(n);
             break;
         case 'r':   // radius0

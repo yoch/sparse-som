@@ -15,7 +15,7 @@ bsom:
 
 debug:
 #	$(CXX) $(CXXFLAGS) -Wno-unknown-pragmas -O2 -s $(SRC) -o $(BUILDDIR)/$(TARGET)	
-	$(CXX) $(CXXFLAGS) -Og -fopenmp $(SRC) -o $(BUILDDIR)/$(TARGET)-dbg
+	$(CXX) $(CXXFLAGS) -g -Wno-unknown-pragmas $(SRC) -o $(BUILDDIR)/$(TARGET)-dbg
 
 #-mpc32 -march=native -mtune=native -ffast-math
 
