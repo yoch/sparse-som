@@ -153,7 +153,6 @@ dataset::dataset(const string& filename, int offset)
     nrows = _indptr.size() - 1;
     nnz = _data.size();
 
-
     // After all, init X^2
     _sqsum = new float[nrows];
 

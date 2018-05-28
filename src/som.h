@@ -57,6 +57,7 @@ template<class T>
 static T squared(const T * const w, size_t sz)
 {
     T ret = 0.;
+//#pragma omp simd
     for (size_t i=0; i < sz; ++i)
     {
         ret += squared(w[i]);
@@ -193,24 +194,24 @@ protected:
 
 #define HEX_H 0.8660254037844386
 
-inline double eucdist (int y, int x, int i, int j, double & d2)
+inline double eucdist (int y0, int x0, int y1, int x1, double & d2)
 {
-    d2 = squared(i-y) + squared(j-x);
+    d2 = squared(y1-y0) + squared(x1-x0);
     return std::sqrt(d2);
 }
 
-inline double eucdist_hexa (int y, int x, int i, int j, double & d2)
+inline double eucdist_hexa (int y0, int x0, int y1, int x1, double & d2)
 {
-    double x6 = (x&1) ? 0.5 + x : x;
-    double j6 = (j&1) ? 0.5 + j : j;
-    d2 = squared((i-y)*HEX_H) + squared(j6-x6);
+    double x6 = (x0&1) ? 0.5 + x0 : x0;
+    double j6 = (x1&1) ? 0.5 + x1 : x1;
+    d2 = squared((y1-y0)*HEX_H) + squared(j6-x6);
     return std::sqrt(d2);
 }
 
-inline double rectdist (int y, int x, int i, int j, double & d2)
+inline double rectdist (int y0, int x0, int y1, int x1, double & d2)
 {
-    d2 = squared(i-y) + squared(j-x); // regular d^2
-    return std::max(std::abs(i-y), std::abs(j-x));
+    d2 = squared(y1-y0) + squared(x1-x0); // regular d^2
+    return std::max(std::abs(y1-y0), std::abs(x1-x0));
 }
 
 template <class T>
