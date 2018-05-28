@@ -12,13 +12,16 @@ import scipy.sparse
 
 cdef extern from "lib/data.h":
     cdef cppclass CSR:
+        CSR()
+        #CSR(float*, int*, int*, int, int, int)
+        void initSqSum()
         float * data
         int * indices
         int * indptr
-        float * _sqsum
         int nrows
         int ncols
         int nnz
+        float * _sqsum
 
 
 cdef CSR csrmat_from_spsparse(sm):
@@ -150,6 +153,8 @@ cdef class BSom:
         :rtype: 2D :class:`numpy.ndarray`
         """
         cdef CSR m = csrmat_from_spsparse(data)
+        # important: initialize X^2 because we want correct mdst as result
+        m.initSqSum()
         cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
         cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
         self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, NULL, NULL)
@@ -287,6 +292,8 @@ cdef class Som:
         if tmax is None:
             tmax = 10 * data.shape[0]
         cdef CSR m = csrmat_from_spsparse(data)
+        # important: initialize X^2
+        m.initSqSum()
         self.c_som.train(m, tmax, r0, a0, rN, aN, std, rcool, acool)
 
     def _dst_argmin_min(self, data):

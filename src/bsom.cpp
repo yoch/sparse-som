@@ -107,7 +107,7 @@ void BSom::setTopology(topology topo)
         break;
     case RECT:
     default:
-        fdist = recdist;
+        fdist = rectdist;
         break;
     }
 }
@@ -323,7 +323,6 @@ void BSom::trainOneEpoch(const CSR& data, float radius, float stdCoef,
     if (m_verbose > 1)
     {
 
-        // unable to compute QE if we don't have X^2
         if (data._sqsum)
         {
             double Qe = 0;

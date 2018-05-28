@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cfloat>
 #include <cmath>
+#include <cassert>
 #include <sstream>
 
 #if defined(_OPENMP)
@@ -124,7 +125,7 @@ void Som::setTopology(topology topo)
         break;
     case RECT:
     default:
-        fdist = recdist;
+        fdist = rectdist;
         break;
     }
 }
@@ -149,10 +150,12 @@ static double squared(const double * const w, size_t sz)
     return ret;
 }
 
+/*
 static inline double euclideanDistanceSq(const float * const vsp, const int * const ind, const size_t vsz, const double x2, const double * const w, const double w2, const double wcoeff)
 {
     return max(0., w2 - 2 * wcoeff * prod(vsp, ind, vsz, w) + x2);
 }
+*/
 
 static inline void partial_update(const float * const vsp, const int * const ind, const size_t n, double * const w, double vcoeff)
 {
@@ -228,7 +231,7 @@ size_t Som::getBmu(const CSR& data, const size_t n, double& dStar) const
     }
 
     // store values
-    dStar = max(0., mini.dst + data._sqsum[n]); // correct euclidean dist
+    dStar = mini.dst;
     return mini.idx;
 }
 
@@ -291,6 +294,8 @@ vector<bmu> Som::getBmus(const CSR& data) const
     for (size_t k=0; k < m_height*m_width; ++k)
     {
         const double * w = &codebook[k * m_dim];
+        const double w2 = squared_sum[k];
+        const double wcoeff = w_coeff[k];
 
 #pragma omp parallel for
 
@@ -298,7 +303,7 @@ vector<bmu> Som::getBmus(const CSR& data) const
         {
             const int ind = data.indptr[i];
             const int vsz = data.indptr[i+1] - ind;
-            const double dst = euclideanDistanceSq(&data.data[ind], &data.indices[ind], vsz, data._sqsum[i], w, squared_sum[k], w_coeff[k]);
+            const double dst = w2 - 2 * wcoeff * prod(&data.data[ind], &data.indices[ind], vsz, w);
 
             if (dst < bmus[i].dst)
             {
@@ -318,23 +323,14 @@ vector<bmu> Som::getBmus(const CSR& data) const
     return bmus;
 }
 
-/*
-static double getQE(vector<bmu>& bmus)
-{
-    double qError = 0.;
-    for (const bmu& star : bmus)
-    {
-        qError += sqrt(star.dst);
-    }
-    return qError / bmus.size();
-}
-*/
-
 void Som::train(const CSR& data, size_t tmax,
            double radius0, double alpha0, double radiusN, double alphaN,
            double stdCoeff, cooling rcool, cooling acool)
 {
     NBSTABLES = 0;
+
+    // Important: ensure that _sqsum is correctly initialized
+    assert (data._sqsum != NULL);
 
     double tm = 0.;
 
@@ -402,8 +398,9 @@ void Som::train(const CSR& data, size_t tmax,
 
         if (m_verbose > 1)
         {
-            Qe += sqrt(dStar);  // approximated
-
+            // correct dStar value
+            dStar += data._sqsum[k];
+            Qe += sqrt(max(0., dStar));
             if (t % percent == 0)
             {
                 cout << "  " << t / percent << "% (" << t << " / " << tmax << ")"
