@@ -157,8 +157,7 @@ void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts) con
             const float * const vsp = &data.data[ind];
             const int * const vind = &data.indices[ind];
 
-            // pseudo squared distance, d_i = d_i + X_i^2
-            const float dst = w2 - 2 * prod(vsp, vind, vsz, w); //euclideanDistanceSq(vsp, vind, vsz, w, w2);
+            const float dst = w2 - 2 * prod(vsp, vind, vsz, w);
 
             if (dst < dsts[i])
             {
@@ -271,10 +270,9 @@ void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
     {
         cout << "  epoch " << t << " / " << tmax;
 
-        // unable to compute QE if we don't have X^2
         if (data._sqsum)
         {
-            float Qe = 0;
+            double Qe = 0;
             for (int i=0; i<data.nrows; ++i)
             {
                 Qe += sqrt(max(0.f, dsts[i] + data._sqsum[i]));
@@ -284,6 +282,7 @@ void BSom::trainOneEpoch(const CSR& data, size_t t, size_t tmax,
             // Note: in fact, this is the quantization error of the previous step (before the update)
             cout << " - QE: " << Qe;
         }
+
         cout << endl;
     }
 }

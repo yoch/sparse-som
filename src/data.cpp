@@ -15,6 +15,9 @@ using namespace std;
 
 void CSR::normalize()
 {
+    assert(_sqsum != NULL);
+
+#pragma omp parallel for
     for (int i=0; i<nrows; ++i)
     {
         const float norm = std::sqrt(_sqsum[i]);
@@ -22,6 +25,22 @@ void CSR::normalize()
         {
             data[j] /= norm;
         }
+    }
+}
+
+void CSR::initSqSum()
+{
+    _sqsum = new float[nrows];
+
+#pragma omp parallel for
+    for (int i=0; i < nrows; ++i)
+    {
+        double sumOfSquares = 0.;
+        for (int j=indptr[i]; j<indptr[i+1]; ++j)
+        {
+            sumOfSquares += data[j] * data[j];
+        }
+        _sqsum[i] = sumOfSquares;
     }
 }
 
@@ -155,17 +174,6 @@ dataset::dataset(const string& filename, int offset)
 
 
     // After all, init X^2
-    _sqsum = new float[nrows];
-
-#pragma omp parallel for
-    for (int i=0; i < nrows; ++i)
-    {
-        double sumOfSquares = 0.;
-        for (int j=indptr[i]; j<indptr[i+1]; ++j)
-        {
-            sumOfSquares += data[j] * data[j];
-        }
-        _sqsum[i] = sumOfSquares;
-    }
+    initSqSum();
 
 }

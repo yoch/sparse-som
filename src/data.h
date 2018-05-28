@@ -9,15 +9,39 @@
 
 struct CSR
 {
+/*
+    CSR()
+    {}
+
+    CSR(float * _data, int * _indices, int * _indptr, int _nrows, int _ncols, int _nnz) :
+        data(_data),
+        indices(_indices),
+        indptr(_indptr),
+        nrows(_nrows),
+        ncols(_ncols),
+        nnz(_nnz)
+    {
+        //initSqSum();
+    }
+
+    CSR(const CSR&) = delete;
+    CSR& operator=(const CSR&) = delete;
+*/
+    ~CSR()
+    {
+        if (_sqsum) delete [] _sqsum;
+    }
+
+    void initSqSum();
+    void normalize();
+
     float * data;
     int * indices;
     int * indptr;
-    float * _sqsum;
     int nrows;
     int ncols;
     int nnz;
-
-    void normalize();
+    float * _sqsum; // to store X^2
 };
 
 
@@ -29,10 +53,6 @@ public:
     dataset(const std::string& filename, int offset=0);     // load from filename
     dataset(const dataset&) = delete;                       // disable copy
     dataset& operator=(const dataset&) = delete;            // disable assignment
-    ~dataset()
-    {
-        if (_sqsum) delete [] _sqsum;
-    }
 
     std::vector<std::string> labels;
 
