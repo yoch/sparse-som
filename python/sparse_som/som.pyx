@@ -146,13 +146,16 @@ cdef class BSom:
         Allow to compute QE
         """
         cdef CSR m = csrmat_from_spsparse(data)
-        # important: initialize X^2 because we want correct mdst as result
-        m.initSqSum()
+        ## important: initialize X^2 because we want correct mdst as result
+        #m.initSqSum()
         cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
         cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
         self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data)
         # correct min dist to be euclidean
-        np.sqrt(mdst, mdst)
+        # correct min dist, because we use external CSR without _sqsum
+        mdst += data.power(2).sum(axis=1).A1
+        np.clip(mdst, 0, None, mdst)
+        np.sqrt(mdst, out=mdst)
         return bmus, mdst
 
     def bmus(self, data):

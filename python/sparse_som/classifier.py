@@ -66,7 +66,7 @@ class SomClassifier:
             else:
                 lbl, p = cls
                 lst.append(lbl)
-        return lst
+        return np.array(lst)
 
     def get_precision(self):
         """\
