@@ -62,5 +62,6 @@ setup(
     'Topic :: Scientific/Engineering :: Information Analysis',
     'Topic :: Scientific/Engineering :: Visualization'
   ],
-  install_requires=['numpy', 'scipy']
+  install_requires=['numpy', 'scipy'],
+  setup_requires=['numpy']
 )
