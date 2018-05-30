@@ -78,7 +78,7 @@ cdef extern from "lib/som.h" namespace "som":
     cdef cppclass _BSom "som::BSom":
         _BSom(size_t, size_t, size_t, topology, int)
         void train(const CSR&, size_t, float, float, float, cooling)
-        void getBmus(const CSR&, size_t *, float *, size_t *, float *, bool)
+        void getBmus(const CSR&, size_t *, float *, size_t *, bool)
         double topographicError(size_t * const bmus, size_t * const second, size_t n)
         size_t getx()
         size_t gety()
@@ -90,7 +90,7 @@ cdef extern from "lib/som.h" namespace "som":
     cdef cppclass _Som "som::Som":
         _Som(size_t, size_t, size_t, topology, int)
         void train(const CSR&, size_t, double, double, double, double, double, cooling, cooling)
-        void getBmus(const CSR&, size_t *, double *, size_t *, double *, bool)
+        void getBmus(const CSR&, size_t *, double *, size_t *, bool)
         double topographicError(size_t * const bmus, size_t * const second, size_t n)
         size_t getx()
         size_t gety()
@@ -163,7 +163,7 @@ cdef class BSom:
         #m.initSqSum()
         cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
         cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
-        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, NULL, NULL, False)
+        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, NULL, False)
         ## correct distances
         #np.sqrt(mdst, out=mdst)
         # format bmus
@@ -184,9 +184,9 @@ cdef class BSom:
         cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
         cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
         cdef np.ndarray[size_t, ndim=1] seconds = np.empty(m.nrows, dtype=np.uintp)
-        cdef np.ndarray[float, ndim=1] sdst = np.empty(m.nrows, dtype=np.single)
-        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, <size_t*> seconds.data, <float*> sdst.data, True)
-        return bmus, seconds, mdst, sdst
+        #cdef np.ndarray[float, ndim=1] sdst = np.empty(m.nrows, dtype=np.single)
+        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, <size_t*> seconds.data, True)
+        return bmus, seconds, mdst
 
     def _topographic_error(self, np.ndarray[size_t, ndim=1] bmus, np.ndarray[size_t, ndim=1] seconds, int nsamples):
         return self.c_som.topographicError(<size_t*> bmus.data, <size_t*> seconds.data, nsamples)
@@ -325,7 +325,7 @@ cdef class Som:
         #m.initSqSum()
         cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
         cdef np.ndarray[double, ndim=1] mdst = np.empty(m.nrows, dtype=np.double)
-        self.c_som.getBmus(m, <size_t*> bmus.data, <double*> mdst.data, NULL, NULL, False)
+        self.c_som.getBmus(m, <size_t*> bmus.data, <double*> mdst.data, NULL, False)
         ## correct distances
         #np.sqrt(mdst, out=mdst)
         return self._to_bmus(bmus) #, mdst
@@ -345,9 +345,9 @@ cdef class Som:
         cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
         cdef np.ndarray[double, ndim=1] mdst = np.empty(m.nrows, dtype=np.double)
         cdef np.ndarray[size_t, ndim=1] seconds = np.empty(m.nrows, dtype=np.uintp)
-        cdef np.ndarray[double, ndim=1] sdst = np.empty(m.nrows, dtype=np.double)
-        self.c_som.getBmus(m, <size_t*> bmus.data, <double*> mdst.data, <size_t*> seconds.data, <double*> sdst.data, True)
-        return bmus, seconds, mdst, sdst
+        #cdef np.ndarray[double, ndim=1] sdst = np.empty(m.nrows, dtype=np.double)
+        self.c_som.getBmus(m, <size_t*> bmus.data, <double*> mdst.data, <size_t*> seconds.data, True)
+        return bmus, seconds, mdst
 
     def _topographic_error(self, np.ndarray[size_t, ndim=1] bmus, np.ndarray[size_t, ndim=1] seconds, int nsamples):
         return self.c_som.topographicError(<size_t*> bmus.data, <size_t*> seconds.data, nsamples)

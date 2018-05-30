@@ -206,8 +206,21 @@ size_t Som::getBmu(const CSR& data, const size_t n, double& dStar) const
     const float * const vsp = &data.data[ind];
     const int * const vind = &data.indices[ind];
 
-    bmu mini = bmu(-1, DBL_MAX);
+    size_t idx = 0;
+    dStar = DBL_MAX;
+
 /*
+
+    struct bmu
+    {
+        bmu(size_t i, double d) :
+            idx(i), dst(d) {}
+        size_t idx;
+        double dst;
+    };
+
+    bmu mini = bmu(-1, DBL_MAX);
+
 #pragma omp declare \
     reduction(BMU : bmu : omp_out = omp_in.dst <= omp_out.dst ? omp_in : omp_out) \
     initializer (omp_priv(omp_orig))
@@ -216,6 +229,7 @@ size_t Som::getBmu(const CSR& data, const size_t n, double& dStar) const
     reduction(BMU:mini) \
     schedule(static,1)
 */
+
     for (size_t k=0; k < m_height*m_width; ++k)
     {
         //precompute w*v (to be used at update stage)
@@ -223,16 +237,14 @@ size_t Som::getBmu(const CSR& data, const size_t n, double& dStar) const
 
         // fast squared euclidean dst (invariant by v^2) : w^2 - 2 w.v
         const double dst = squared_sum[k] - 2 * (wvprod[k] * w_coeff[k]);
-        if (dst < mini.dst)
+        if (dst < dStar)
         {
-            mini.idx = k;
-            mini.dst = dst;
+            idx = k;
+            dStar = dst;
         }
     }
 
-    // store values
-    dStar = mini.dst;
-    return mini.idx;
+    return idx;
 }
 
 void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double alpha, double stdCoeff)
@@ -244,6 +256,7 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
               stopI = min((int)m_height-1,y+r),
               startJ = max(0,x-r),
               stopJ = min((int)m_width-1,x+r);
+    const double sig2 = 2 * squared(radius * stdCoeff);
 
     const int ind = data.indptr[n];
     const int vsz = data.indptr[n+1] - ind;
@@ -263,7 +276,7 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
                 continue;
 
             const size_t idx = i * m_width + j;
-            const double neighborhood = exp(-d2 / (2 * squared(radius * stdCoeff)));
+            const double neighborhood = exp(-d2 / sig2);
             const double a = alpha * neighborhood;
             const double b = 1. - a; // beware, if b==0 then calculus goes wrong
 
@@ -284,15 +297,18 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
     }
 }
 
-
-void Som::getBmus(const CSR& data, size_t * const bmus, double * const dsts, size_t * const second, double * const sdsts, bool correct) const
+void Som::getBmus(const CSR& data, size_t * const bmus, double * const dsts, size_t * const second, bool correct) const
 {
     assert(data._sqsum != NULL || !correct);
+    
+    double * sdsts = NULL;
 
     fill_n(bmus, data.nrows, 0);
     fill_n(dsts, data.nrows, DBL_MAX);
+
     if (second)
     {
+        sdsts = new double[data.nrows];
         fill_n(second, data.nrows, 0);
         fill_n(sdsts, data.nrows, DBL_MAX);
     }
@@ -349,10 +365,11 @@ void Som::getBmus(const CSR& data, size_t * const bmus, double * const dsts, siz
         for (idx_t i=0; i < (idx_t) data.nrows; ++i)
         {
             dsts[i] = max(0., dsts[i] + data._sqsum[i]);
-            if (sdsts != NULL)
-                sdsts[i] = max(0., sdsts[i] + data._sqsum[i]);
         }
     }
+
+    if (sdsts)
+        delete [] sdsts;
 }
 
 void Som::train(const CSR& data, size_t tmax,

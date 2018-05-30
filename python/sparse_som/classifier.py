@@ -61,7 +61,7 @@ class SomClassifier:
         :returns: the BMUs, the QE and the TE
         :rtype: tuple
         """
-        bmus, seconds, mdst, sdst = self._som._bmus_and_seconds(data)
+        bmus, seconds, mdst = self._som._bmus_and_seconds(data)
         quant_error = np.sqrt(mdst, out=mdst).mean()
         topog_error = self._som._topographic_error(bmus, seconds, data.shape[0])
         return self._som._to_bmus(bmus), quant_error, topog_error

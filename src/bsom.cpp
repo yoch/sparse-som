@@ -2,6 +2,7 @@
 
 #include <random>
 #include <ctime>
+#include <cassert>
 #include <algorithm>
 #include <numeric>
 #include <fstream>
@@ -160,14 +161,18 @@ void BSom::init()
   }
 }
 
-void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts, size_t * const second, float * const sdsts, bool correct) const
+void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts, size_t * const second, bool correct) const
 {
     assert(data._sqsum != NULL || !correct);
 
+    float * sdsts = NULL;
+
     fill_n(bmus, data.nrows, 0);
     fill_n(dsts, data.nrows, FLT_MAX);
+
     if (second)
     {
+        sdsts = new float[data.nrows];;
         fill_n(second, data.nrows, 0);
         fill_n(sdsts, data.nrows, FLT_MAX);
     }
@@ -224,15 +229,16 @@ void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts, siz
         for (idx_t i=0; i < (idx_t) data.nrows; ++i)
         {
             dsts[i] = max(0.f, dsts[i] + data._sqsum[i]);
-            if (sdsts != NULL)
-                sdsts[i] = max(0.f, sdsts[i] + data._sqsum[i]);
         }
     }
+
+    if (sdsts) delete [] sdsts;
 }
 
 void BSom::update(const CSR& data, const float radius, const float stdCoef, size_t * const bmus)
 {
 //    SKIPPED = 0;
+    const double sig2 = 2 * squared(radius * stdCoef);
 
 #pragma omp parallel // shared(data)
  {
@@ -264,7 +270,7 @@ void BSom::update(const CSR& data, const float radius, const float stdCoef, size
             if (fdist(y, x, i, j, d2) > radius+1)
                 continue;
 
-            const float h = exp(-d2 / (2 * squared(radius * stdCoef)));
+            const float h = exp(-d2 / sig2);
 
             denominator += h;
             for (int it=0; it<vsz; ++it)
@@ -317,17 +323,18 @@ void BSom::trainOneEpoch(const CSR& data, float radius, float stdCoef,
 {
 
     size_t * second = NULL;
-    float * sdsts = NULL;
+    bool correct = false;
 
     if (m_verbose > 1)
     {
         second = new size_t[data.nrows];
-        sdsts = new float[data.nrows];
+        if (data._sqsum)
+            correct = true;
     }
 
     ///////////////////////////////////////////
     ///          Searching BMUs
-    getBmus(data, bmus, dsts, second, sdsts);
+    getBmus(data, bmus, dsts, second, correct);
 
     //////////////////////////////////////////
     ///            Update phase
@@ -335,13 +342,12 @@ void BSom::trainOneEpoch(const CSR& data, float radius, float stdCoef,
 
     if (m_verbose > 1)
     {
-
-        if (data._sqsum)
+        if (correct)
         {
             double Qe = 0;
             for (int i=0; i<data.nrows; ++i)
             {
-                Qe += sqrt(max(0.f, dsts[i] + data._sqsum[i]));
+                Qe += sqrt(dsts[i]);
             }
             Qe /= data.nrows;
 
@@ -354,14 +360,13 @@ void BSom::trainOneEpoch(const CSR& data, float radius, float stdCoef,
             cout << " - TE: " << topographicError(bmus, second, data.nrows);
         }
 
-//        cout << "  (" << SKIPPED << " units skipped)";
+        //cout << "  (" << SKIPPED << " units skipped)";
         // Note: in fact, this is the topographic error of the previous step (before the update)
         cout << endl;
-
     }
 
-    if (second) delete [] second;
-    if (sdsts) delete [] sdsts;
+    if (second)
+        delete [] second;
 }
 
 void BSom::train(const CSR& data, size_t tmax,
