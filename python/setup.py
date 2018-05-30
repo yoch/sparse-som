@@ -1,7 +1,6 @@
 import os
 import sys
 from setuptools import setup, Extension
-import numpy as np
 
 
 if '--use-cython' in sys.argv:
@@ -13,7 +12,7 @@ else:
 
 if os.name == 'posix':
     extra_compile_args = ['-std=c++11', '-fopenmp']
-    extra_link_args = ['-fopenmp']
+    extra_link_args = ['-std=c++11', '-fopenmp']
 elif os.name == 'nt':
     extra_compile_args = ['/openmp']
     extra_link_args = []
@@ -24,13 +23,19 @@ else:
 ext = '.pyx' if USE_CYTHON else '.cpp'
 
 extensions = [Extension('sparse_som.som',
-                sources=['sparse_som/som'+ext,
-                         'sparse_som/lib/som.cpp',
-                         'sparse_som/lib/bsom.cpp',
-                         'sparse_som/lib/data.cpp'],
+                sources=[
+                    'sparse_som/som'+ext,
+                    'sparse_som/lib/som.cpp',
+                    'sparse_som/lib/bsom.cpp',
+                    'sparse_som/lib/data.cpp',
+                ],
+                extra_objects=[
+                    'sparse_som/lib/som.h',
+                    'sparse_som/lib/data.h',
+                ],
                 extra_compile_args=extra_compile_args,
                 extra_link_args=extra_link_args,
-                include_dirs = ['sparse_som/lib/', np.get_include()],
+                include_dirs=['sparse_som/'],
                 language='c++')]
 
 
@@ -40,16 +45,25 @@ else:
     from distutils.command.build_ext import build_ext
 
 
+class NumpyBuildExt(build_ext):
+    "build_ext command for use when numpy headers are needed."
+    def run(self):
+        import numpy
+
+        self.include_dirs.append(numpy.get_include())
+        build_ext.run(self)
+
+
 setup(
   name = 'sparse_som',
   packages = ['sparse_som'],
-  version = '0.5',
+  version = '0.5.5',
   description = 'Self-Organizing Maps for sparse inputs in python',
   author = 'J. Melka',
   url = 'https://github.com/yoch/sparse-som',
   ext_modules = extensions,
-  cmdclass = {'build_ext': build_ext},
-  package_data = {'': ['*.pyx']},
+  cmdclass = {'build_ext': NumpyBuildExt},
+  #package_data = {'sparse_som': ['*.pyx']},
   license = 'GPL3',
   classifiers=[
     'Development Status :: 4 - Beta',
@@ -62,6 +76,5 @@ setup(
     'Topic :: Scientific/Engineering :: Information Analysis',
     'Topic :: Scientific/Engineering :: Visualization'
   ],
-  install_requires=['numpy', 'scipy'],
-  setup_requires=['numpy']
+  install_requires=['numpy', 'scipy']
 )

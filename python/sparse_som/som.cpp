@@ -27529,7 +27529,7 @@ if (!__Pyx_RefNanny) {
 
   /* "sparse_som/som.pyx":1
  * # distutils: language = c++             # <<<<<<<<<<<<<<
- * # distutils: sources = lib/bsom.cpp, lib/som.cpp
+ * # distutils: sources = lib/bsom.cpp, lib/som.cpp, lib/data.cpp
  * 
  */
   __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 1, __pyx_L1_error)

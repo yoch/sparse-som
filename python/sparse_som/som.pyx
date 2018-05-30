@@ -1,5 +1,5 @@
 # distutils: language = c++
-# distutils: sources = lib/bsom.cpp, lib/som.cpp
+# distutils: sources = lib/bsom.cpp, lib/som.cpp, lib/data.cpp
 
 
 cimport cython
