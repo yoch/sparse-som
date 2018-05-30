@@ -284,43 +284,75 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
     }
 }
 
-vector<bmu> Som::getBmus(const CSR& data) const
+
+void Som::getBmus(const CSR& data, size_t * const bmus, double * const dsts, size_t * const second, double * const sdsts, bool correct) const
 {
-/*
-    clock_t t1 = clock();
-*/
-    vector<bmu> bmus = vector<bmu>(data.nrows, bmu(0, DBL_MAX));
+    assert(data._sqsum != NULL || !correct);
 
-    for (size_t k=0; k < m_height*m_width; ++k)
+    fill_n(bmus, data.nrows, 0);
+    fill_n(dsts, data.nrows, DBL_MAX);
+    if (second)
     {
-        const double * w = &codebook[k * m_dim];
-        const double w2 = squared_sum[k];
-        const double wcoeff = w_coeff[k];
+        fill_n(second, data.nrows, 0);
+        fill_n(sdsts, data.nrows, DBL_MAX);
+    }
 
-#pragma omp parallel for
+    for (size_t k=0; k < m_height * m_width; ++k)
+    {
+        const double * const w = codebook + k * m_dim;
+
+        // precompute {w_k}^2
+        const double w2 = squared(w, m_dim);
+
+// ensure that two threads don't access shared data (at i index) at a time
+#pragma omp parallel for // shared(data,k,w2)
 
         for (idx_t i=0; i < (idx_t) data.nrows; ++i)
         {
             const int ind = data.indptr[i];
             const int vsz = data.indptr[i+1] - ind;
-            const double dst = w2 - 2 * wcoeff * prod(&data.data[ind], &data.indices[ind], vsz, w);
+            const float * const vsp = &data.data[ind];
+            const int * const vind = &data.indices[ind];
 
-            if (dst < bmus[i].dst)
+            // pseudo squared distance, d_i = d_i + X_i^2
+            const float dst = w2 - 2 * prod(vsp, vind, vsz, w);
+
+            if (!second)
             {
-                bmus[i].idx = k;
-                bmus[i].dst = dst;
+                if (dst < dsts[i])
+                {
+                    bmus[i] = k;
+                    dsts[i] = dst;
+                }
+            }
+            else // second!=NULL
+            {
+                if (dst < dsts[i])
+                {
+                    second[i] = bmus[i];
+                    sdsts[i] = dsts[i];
+                    bmus[i] = k;
+                    dsts[i] = dst;
+                }
+                else if (dst < sdsts[i])
+                {
+                    second[i] = k;
+                    sdsts[i] = dst;
+                }
             }
         }
     }
-/*
-    clock_t t2 = clock();
 
-    if (m_verbose)
+    if (correct)
     {
-        cout << " get bmus - elapsed " << (double)(t2-t1) / CLOCKS_PER_SEC << "s" << endl;
+#pragma omp parallel for
+        for (idx_t i=0; i < (idx_t) data.nrows; ++i)
+        {
+            dsts[i] = max(0., dsts[i] + data._sqsum[i]);
+            if (sdsts != NULL)
+                sdsts[i] = max(0., sdsts[i] + data._sqsum[i]);
+        }
     }
-*/
-    return bmus;
 }
 
 void Som::train(const CSR& data, size_t tmax,
@@ -442,6 +474,24 @@ void Som::train(const CSR& data, size_t tmax,
     }
 }
 
+double Som::topographicError(size_t * const bmus, size_t * const second, size_t n) const
+{
+    size_t errors = 0;
+    for (size_t k=0; k<n; ++k)
+    {
+        double d2;
+        const int y = bmus[k] / m_width,
+                  x = bmus[k] % m_width,
+                  i = second[k] / m_width,
+                  j = second[k] % m_width;
+        if (fdist(y, x, i, j, d2) > 1)
+        {
+            errors++;
+        }
+    }
+    //cout << endl << errors << " topographic errors on " << n << " samples" << endl;
+    return (double) errors / n;
+}
 
 void Som::dump(const std::string& filename, bool binary) const
 {
@@ -510,13 +560,21 @@ void Som::dumpSparse(const string& filename, double epsilon) const
 
 vector<label_counter> Som::calibrate(const dataset& dataSet) const
 {
+    size_t * bmus = new size_t[dataSet.nrows];
+    double * dsts = new double[dataSet.nrows];
+
+    getBmus(dataSet, bmus, dsts);
+
     vector<label_counter> mappings = vector<label_counter>(m_height*m_width);
-    vector<bmu> bmus = getBmus(dataSet);
     for (int k=0; k < dataSet.nrows; ++k)
     {
-        const bmu & star = bmus[k];
-        mappings[star.idx][dataSet.labels[k]]++;
+        const size_t kStar = bmus[k];
+        mappings[kStar][dataSet.labels[k]]++;
     }
+
+    delete [] bmus;
+    delete [] dsts;
+
     return mappings;
 }
 

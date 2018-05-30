@@ -13,6 +13,10 @@ class SomClassifier:
         :param \**kwargs: named parameters for the constructor
         """
         self._som = cls(*args, **kwargs)
+        self._bmus = None   # bmus of the training data
+        self.classifier = None
+        self.qerror = None
+        self.terror = None
 
     def fit(self, data, labels, **kwargs):
         """\
@@ -24,25 +28,30 @@ class SomClassifier:
         :type labels: iterable
         :param \**kwargs: optional parameters for :meth:`train`
         """
+        # train the network
         self._som.train(data, **kwargs)
+        # retrieve first and second bmus and distances
+        bmus, q_error, t_error = self.bmus_with_errors(data)
+        # set errors measures of training data
+        self.quant_error = q_error
+        self.topog_error = t_error
+        # store training bmus
+        self._bmus = bmus
+        # calibrate
         self._calibrate(data, labels)
 
-    def _calibrate(self, data, labels, _bmus=None):
-        if _bmus is None:
-            _bmus = self.bmus(data)
-            print(_bmus)
+    def _calibrate(self, data, labels):
         # network calibration
         classifier = defaultdict(Counter)
-        for (i,j), label in zip(_bmus, labels):
+        for (i,j), label in zip(self._bmus, labels):
             classifier[i,j][label] += 1
         self.classifier = {}
         for ij, cnt in classifier.items():
             maxi = max(cnt.items(), key=itemgetter(1))
             nb = sum(cnt.values())
             self.classifier[ij] = maxi[0], maxi[1] / nb
-        return _bmus
 
-    def error_metrics(self, data):
+    def bmus_with_errors(self, data):
         """\
         Compute common error metrics (Quantization err. and Topographic err.)
         for this data.
@@ -52,23 +61,10 @@ class SomClassifier:
         :returns: the BMUs, the QE and the TE
         :rtype: tuple
         """
-        assert isinstance(self._som, som.BSom), 'Error metrics must use BSom classifier'
         bmus, seconds, mdst, sdst = self._som._bmus_and_seconds(data)
-        # correct min dist, because we use external CSR without _sqsum
-        mdst += data.power(2).sum(axis=1).A1
-        np.clip(mdst, 0, None, mdst)
-        np.sqrt(mdst, mdst)
-        quantization_err = mdst.mean()
-        # BEWARE: rectangular dist only...
-        shape = (self._som.nrows, self._som.ncols)
-        #y1, x1 = np.unravel_index(bmus, shape)
-        #y2, x2 = np.unravel_index(seconds, shape)
-        #dy = abs(y1 - y2)
-        #dx = abs(x1 - x2)
-        #topographic_err = (np.maximum(dy, dx) > 1).mean()
-        topographic_err = self._som._topographic_error(bmus, seconds, data.shape[0])
-        YX = np.unravel_index(bmus, shape)
-        return np.vstack(YX).T, quantization_err, topographic_err
+        quant_error = np.sqrt(mdst, out=mdst).mean()
+        topog_error = self._som._topographic_error(bmus, seconds, data.shape[0])
+        return self._som._to_bmus(bmus), quant_error, topog_error
 
     def predict(self, data, unkown=None, _bmus=None):
         """\
@@ -80,7 +76,7 @@ class SomClassifier:
         :returns: the labels guessed for data
         :rtype: list
         """
-        if not hasattr(self, 'classifier'):
+        if self.classifier is None:
             raise RuntimeError('not calibrated')
         if _bmus is None:
             _bmus = self._som.bmus(data)
@@ -92,21 +88,21 @@ class SomClassifier:
             else:
                 lbl, p = cls
                 lst.append(lbl)
-        return lst
+        return np.array(lst)
 
     def get_precision(self):
         """\
         :returns: the ratio part of the dominant label for each unit.
         :rtype: 2D :class:`numpy.ndarray`
         """
-        if not hasattr(self, 'classifier'):
+        if self.classifier is None:
             raise RuntimeError('not calibrated')
         arr = np.zeros((self._som.nrows, self._som.ncols))
         for ij, (lbl, p) in self.classifier.items():
             arr[ij] = p
         return arr
 
-    def histogram(self, bmus):
+    def histogram(self, bmus=None):
         """\
         Return a 2D histogram of bmus.
 
@@ -115,6 +111,8 @@ class SomClassifier:
         :returns: the computed 2D histogram of bmus.
         :rtype: :class:`numpy.ndarray`
         """
+        if bmus is None:
+            bmus = self._bmus
         arr = np.zeros((self._som.nrows, self._som.ncols))
         for i,j in bmus:
             arr[i,j] += 1

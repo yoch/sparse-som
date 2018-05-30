@@ -82,7 +82,8 @@ public:
                double r0, double a0, double rN=FLT_MIN, double aN=FLT_MIN,
                double stdCoeff=0.3, cooling rc=LINEAR, cooling ac=LINEAR);
 
-    std::vector<bmu> getBmus(const CSR&) const;
+    void getBmus(const CSR&, size_t * const bmus, double * const dsts, size_t * const second=NULL, double * const sdsts=NULL, bool correct=false) const;
+    double topographicError(size_t * const bmus, size_t * const second, size_t n) const;
     std::vector<label_counter> calibrate(const dataset& dataSet) const;
 
     // IO gestion
@@ -136,7 +137,7 @@ public:
     void train(const CSR&, size_t tcoef,
                float r0, float rN=0.f, float stdCoef=0.3, cooling rc=LINEAR);
 
-    void getBmus(const CSR&, size_t * const bmus, float * const dsts, size_t * const second=NULL, float * const sdsts=NULL) const;
+    void getBmus(const CSR&, size_t * const bmus, float * const dsts, size_t * const second=NULL, float * const sdsts=NULL, bool correct=false) const;
     double topographicError(size_t * const bmus, size_t * const second, size_t n) const;
     std::vector<label_counter> calibrate(const dataset& dataSet) const;
 

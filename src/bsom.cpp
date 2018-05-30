@@ -160,8 +160,10 @@ void BSom::init()
   }
 }
 
-void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts, size_t * const second, float * const sdsts) const
+void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts, size_t * const second, float * const sdsts, bool correct) const
 {
+    assert(data._sqsum != NULL || !correct);
+
     fill_n(bmus, data.nrows, 0);
     fill_n(dsts, data.nrows, FLT_MAX);
     if (second)
@@ -213,6 +215,17 @@ void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts, siz
                     sdsts[i] = dst;
                 }
             }
+        }
+    }
+
+    if (correct)
+    {
+#pragma omp parallel for
+        for (idx_t i=0; i < (idx_t) data.nrows; ++i)
+        {
+            dsts[i] = max(0.f, dsts[i] + data._sqsum[i]);
+            if (sdsts != NULL)
+                sdsts[i] = max(0.f, sdsts[i] + data._sqsum[i]);
         }
     }
 }

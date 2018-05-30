@@ -5,6 +5,7 @@
 cimport cython
 cimport numpy as np
 from cython cimport view
+from libcpp cimport bool
 import numpy as np
 import scipy.sparse
 
@@ -77,7 +78,7 @@ cdef extern from "lib/som.h" namespace "som":
     cdef cppclass _BSom "som::BSom":
         _BSom(size_t, size_t, size_t, topology, int)
         void train(const CSR&, size_t, float, float, float, cooling)
-        void getBmus(const CSR&, size_t *, float *, size_t *, float *)
+        void getBmus(const CSR&, size_t *, float *, size_t *, float *, bool)
         double topographicError(size_t * const bmus, size_t * const second, size_t n)
         size_t getx()
         size_t gety()
@@ -89,6 +90,8 @@ cdef extern from "lib/som.h" namespace "som":
     cdef cppclass _Som "som::Som":
         _Som(size_t, size_t, size_t, topology, int)
         void train(const CSR&, size_t, double, double, double, double, double, cooling, cooling)
+        void getBmus(const CSR&, size_t *, double *, size_t *, double *, bool)
+        double topographicError(size_t * const bmus, size_t * const second, size_t n)
         size_t getx()
         size_t gety()
         size_t getz()
@@ -142,8 +145,31 @@ cdef class BSom:
         cdef CSR m = csrmat_from_spsparse(data)
         self.c_som.train(m, epochs, r0, rN, std, cool)
 
+    def _to_bmus(self, bmus):
+        YX = np.unravel_index(bmus, (self.nrows, self.ncols))
+        return np.vstack(YX).transpose()
 
     def bmus(self, data):
+        """\
+        Return the best match units for data.
+
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
+        :type data: :class:`scipy.sparse.spmatrix`
+        :returns: an array of the bmus coordinates (y,x)
+        :rtype: 2D :class:`numpy.ndarray`
+        """
+        cdef CSR m = csrmat_from_spsparse(data)
+        ## important: initialize X^2 because we want correct mdst as result
+        #m.initSqSum()
+        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
+        cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
+        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, NULL, NULL, False)
+        ## correct distances
+        #np.sqrt(mdst, out=mdst)
+        # format bmus
+        return self._to_bmus(bmus) #, mdst
+
+    def _bmus_and_seconds(self, data):
         """\
         Return the best match units for data.
 
@@ -157,26 +183,10 @@ cdef class BSom:
         m.initSqSum()
         cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
         cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
-        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, NULL, NULL)
-        YX = np.unravel_index(bmus, (self.nrows, self.ncols))
-        return np.vstack(YX).transpose()
-
-    def _bmus_and_seconds(self, data):
-        """\
-        Return the best match units for data.
-
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
-        :type data: :class:`scipy.sparse.spmatrix`
-        :returns: an array of the bmus coordinates (y,x)
-        :rtype: 2D :class:`numpy.ndarray`
-        """
-        cdef CSR m = csrmat_from_spsparse(data)
-        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
-        cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
         cdef np.ndarray[size_t, ndim=1] seconds = np.empty(m.nrows, dtype=np.uintp)
         cdef np.ndarray[float, ndim=1] sdst = np.empty(m.nrows, dtype=np.single)
-        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, <size_t*> seconds.data, <float*> sdst.data)
-        return bmus, seconds, mdst, sdst        
+        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, <size_t*> seconds.data, <float*> sdst.data, True)
+        return bmus, seconds, mdst, sdst
 
     def _topographic_error(self, np.ndarray[size_t, ndim=1] bmus, np.ndarray[size_t, ndim=1] seconds, int nsamples):
         return self.c_som.topographicError(<size_t*> bmus.data, <size_t*> seconds.data, nsamples)
@@ -296,19 +306,10 @@ cdef class Som:
         m.initSqSum()
         self.c_som.train(m, tmax, r0, a0, rN, aN, std, rcool, acool)
 
-    def _dst_argmin_min(self, data):
-        codebook = self.codebook
-        shape = codebook.shape
-        codebook.shape = (-1, self.dim)
-        dst = -2 * data.dot(codebook.T)
-        dst += (codebook ** 2).sum(axis=1)
-        dst += data.power(2).sum(axis=1)
-        codebook.shape = shape
-        bmus = dst.argmin(axis=1)
-        mdst = dst.min(axis=1)
-        np.clip(mdst, 0, None, mdst)
-        np.sqrt(mdst, mdst)
-        return bmus, mdst
+
+    def _to_bmus(self, bmus):
+        YX = np.unravel_index(bmus, (self.nrows, self.ncols))
+        return np.vstack(YX).transpose()
 
     def bmus(self, data):
         """\
@@ -319,9 +320,37 @@ cdef class Som:
         :returns: an array of the bmus coordinates (y,x)
         :rtype: 2D :class:`numpy.ndarray`
         """
-        bmus, _ = self._dst_argmin_min(data)
-        YX = np.unravel_index(bmus, (self.nrows, self.ncols))
-        return np.vstack(YX).transpose()
+        cdef CSR m = csrmat_from_spsparse(data)
+        ## important: initialize X^2 because we want correct mdst as result
+        #m.initSqSum()
+        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
+        cdef np.ndarray[double, ndim=1] mdst = np.empty(m.nrows, dtype=np.double)
+        self.c_som.getBmus(m, <size_t*> bmus.data, <double*> mdst.data, NULL, NULL, False)
+        ## correct distances
+        #np.sqrt(mdst, out=mdst)
+        return self._to_bmus(bmus) #, mdst
+
+    def _bmus_and_seconds(self, data):
+        """\
+        Return the best match units for data.
+
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
+        :type data: :class:`scipy.sparse.spmatrix`
+        :returns: an array of the bmus coordinates (y,x)
+        :rtype: 2D :class:`numpy.ndarray`
+        """
+        cdef CSR m = csrmat_from_spsparse(data)
+        # important: initialize X^2 because we want correct mdst as result
+        m.initSqSum()
+        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
+        cdef np.ndarray[double, ndim=1] mdst = np.empty(m.nrows, dtype=np.double)
+        cdef np.ndarray[size_t, ndim=1] seconds = np.empty(m.nrows, dtype=np.uintp)
+        cdef np.ndarray[double, ndim=1] sdst = np.empty(m.nrows, dtype=np.double)
+        self.c_som.getBmus(m, <size_t*> bmus.data, <double*> mdst.data, <size_t*> seconds.data, <double*> sdst.data, True)
+        return bmus, seconds, mdst, sdst
+
+    def _topographic_error(self, np.ndarray[size_t, ndim=1] bmus, np.ndarray[size_t, ndim=1] seconds, int nsamples):
+        return self.c_som.topographicError(<size_t*> bmus.data, <size_t*> seconds.data, nsamples)
 
     @property
     def codebook(self):
