@@ -15,12 +15,15 @@ class SomClassifier:
         self._som = cls(*args, **kwargs)
         self._bmus = None   # bmus of the training data
         self.classifier = None
-        self.qerror = None
-        self.terror = None
+        self.quant_error = None
+        self.topog_error = None
 
     def fit(self, data, labels, **kwargs):
         """\
         Training the SOM on the the data and calibrate itself.
+
+        After the training, `self.quant_error` and `self.topog_error` are 
+        respectively set.
 
         :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
         :type data: :class:`scipy.sparse.spmatrix`
@@ -41,6 +44,9 @@ class SomClassifier:
         self._calibrate(data, labels)
 
     def _calibrate(self, data, labels):
+        """\
+        Calibrate the network using `self._bmus`.
+        """
         # network calibration
         classifier = defaultdict(Counter)
         for (i,j), label in zip(self._bmus, labels):
@@ -66,22 +72,9 @@ class SomClassifier:
         topog_error = self._som._topographic_error(bmus, seconds, data.shape[0])
         return self._som._to_bmus(bmus), quant_error, topog_error
 
-    def predict(self, data, unkown=None, _bmus=None):
-        """\
-        Classify data according to previous calibration.
-
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
-        :type data: :class:`scipy.sparse.spmatrix`
-        :param unkown: the label to attribute if no label is known
-        :returns: the labels guessed for data
-        :rtype: list
-        """
-        if self.classifier is None:
-            raise RuntimeError('not calibrated')
-        if _bmus is None:
-            _bmus = self._som.bmus(data)
+    def _predict_from_bmus(self, bmus, unkown):
         lst = []
-        for i,j in _bmus:
+        for i,j in bmus:
             cls = self.classifier.get((i,j))
             if cls is None:
                 lst.append(unkown)
@@ -89,14 +82,42 @@ class SomClassifier:
                 lbl, p = cls
                 lst.append(lbl)
         return np.array(lst)
+        
+    def predict(self, data, unkown=None):
+        """\
+        Classify data according to previous calibration.
+
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
+        :type data: :class:`scipy.sparse.spmatrix`
+        :param unkown: the label to attribute if no label is known
+        :returns: the labels guessed for data
+        :rtype: `numpy.array`
+        """
+        assert self.classifier is not None, 'not calibrated'
+        bmus = self._som.bmus(data)
+        return self._predict_from_bmus(bmus, unkown)
+
+    def fit_predict(self, data, labels, unkown=None):
+        """\
+        Fit and classify data efficiently.
+
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
+        :type data: :class:`scipy.sparse.spmatrix`
+        :param labels: the labels associated with data
+        :type labels: iterable
+        :param unkown: the label to attribute if no label is known
+        :returns: the labels guessed for data
+        :rtype: `numpy.array`
+        """
+        self.fit(data, labels)
+        return self._predict_from_bmus(self._bmus, unkown)
 
     def get_precision(self):
         """\
         :returns: the ratio part of the dominant label for each unit.
         :rtype: 2D :class:`numpy.ndarray`
         """
-        if self.classifier is None:
-            raise RuntimeError('not calibrated')
+        assert self.classifier is not None, 'not calibrated'
         arr = np.zeros((self._som.nrows, self._som.ncols))
         for ij, (lbl, p) in self.classifier.items():
             arr[ij] = p
@@ -112,6 +133,7 @@ class SomClassifier:
         :rtype: :class:`numpy.ndarray`
         """
         if bmus is None:
+            assert self._bmus is not None, 'not trained'
             bmus = self._bmus
         arr = np.zeros((self._som.nrows, self._som.ncols))
         for i,j in bmus:
