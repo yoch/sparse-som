@@ -25,8 +25,8 @@ class SomClassifier:
         After the training, `self.quant_error` and `self.topog_error` are 
         respectively set.
 
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
-        :type data: :class:`scipy.sparse.spmatrix`
+        :param data: sparse input matrix (ideal dtype is `numpy.float32`)
+        :type data: :class:`scipy.sparse.csr_matrix`
         :param labels: the labels associated with data
         :type labels: iterable
         :param \**kwargs: optional parameters for :meth:`train`
@@ -62,8 +62,8 @@ class SomClassifier:
         Compute common error metrics (Quantization err. and Topographic err.)
         for this data.
 
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
-        :type data: :class:`scipy.sparse.spmatrix`
+        :param data: sparse input matrix (ideal dtype is `numpy.float32`)
+        :type data: :class:`scipy.sparse.csr_matrix`
         :returns: the BMUs, the QE and the TE
         :rtype: tuple
         """
@@ -87,8 +87,8 @@ class SomClassifier:
         """\
         Classify data according to previous calibration.
 
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
-        :type data: :class:`scipy.sparse.spmatrix`
+        :param data: sparse input matrix (ideal dtype is `numpy.float32`)
+        :type data: :class:`scipy.sparse.csr_matrix`
         :param unkown: the label to attribute if no label is known
         :returns: the labels guessed for data
         :rtype: `numpy.array`
@@ -101,8 +101,8 @@ class SomClassifier:
         """\
         Fit and classify data efficiently.
 
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.float32`)
-        :type data: :class:`scipy.sparse.spmatrix`
+        :param data: sparse input matrix (ideal dtype is `numpy.float32`)
+        :type data: :class:`scipy.sparse.csr_matrix`
         :param labels: the labels associated with data
         :type labels: iterable
         :param unkown: the label to attribute if no label is known
