@@ -1,12 +1,12 @@
 import os
-import sys
 from setuptools import setup, Extension
 
 
-if '--use-cython' in sys.argv:
+try:
+    from Cython.Build import build_ext  # cythonize don't works
     USE_CYTHON = True
-    sys.argv.remove('--use-cython')
-else:
+except:
+    from distutils.command.build_ext import build_ext
     USE_CYTHON = False
 
 
@@ -17,7 +17,7 @@ elif os.name == 'nt':
     extra_compile_args = ['/openmp']
     extra_link_args = []
 else:
-    raise RuntimeError('unkown platform')
+    raise RuntimeError('unsupported platform')
 
 
 ext = '.pyx' if USE_CYTHON else '.cpp'
@@ -39,17 +39,10 @@ extensions = [Extension('sparse_som.som',
                 language='c++')]
 
 
-if USE_CYTHON:
-    from Cython.Build import build_ext  # cythonize don't works
-else:
-    from distutils.command.build_ext import build_ext
-
-
 class NumpyBuildExt(build_ext):
     "build_ext command for use when numpy headers are needed."
     def run(self):
         import numpy
-
         self.include_dirs.append(numpy.get_include())
         build_ext.run(self)
 
@@ -63,7 +56,6 @@ setup(
   url = 'https://github.com/yoch/sparse-som',
   ext_modules = extensions,
   cmdclass = {'build_ext': NumpyBuildExt},
-  #package_data = {'sparse_som': ['*.pyx']},
   license = 'GPL3',
   classifiers=[
     'Development Status :: 4 - Beta',
