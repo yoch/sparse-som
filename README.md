@@ -44,22 +44,23 @@ To use the *online* version :
 
 ```
 Usage: sparse-som
-        -i infile - input file at libsvm sparse format
-        -y nrows  - number of rows in the codebook
-        -x ncols  - number of columns in the codebook
-        [ -u ] - one based column indices (default is zero based)
-        [ -N ] - normalize the input vectors
-        [ -l codebook ]   - load codebook from binary file
-        [ -o|O codebook ] - output codebook to filename (o:binary, O:text)
-        [ -c|C classes ]  - output classification (c:without counts, C:with counts)
-        [ -n neighborhood ] - neighborhood topology: 4=circ, 6=hexa, 8=rect (default 8)
-        [ -t tmax | -T epochs ]   - number of training iterations (epoch=nb. of samples)
-        [ -r radius0 -R radiusN ] - radius at start and end (default r=(x+y)/2, R=0.5)
-        [ -a alpha0  -A  alphaN ] - learning rate at start and end (default a=0.5, A=1.e-37)
-        [ -H radiusCool ] - radius cooling: 0=linear, 1=exponential (default 0)
-        [ -h  alphaCool ] - alpha cooling: 0=linear, 1=exponential (default 0)
-        [ -s stdCoeff ]   - sigma = radius * coeff (default 0.3)
-        [ -v ] - increase verbosity level (default 0, max 2)
+        -i infile        input file at libsvm sparse format
+        -y nrows         number of rows in the codebook
+        -x ncols         number of columns in the codebook
+        [ -d dim ]       force the dimension of codebook's vectors
+        [ -u ]           one based column indices (default is zero based)
+        [ -N ]           normalize the input vectors
+        [ -l cb ]        load codebook from binary file
+        [ -o|O cb ]      output codebook to filename (o:binary, O:text)
+        [ -c|C cl ]      output classification (c:without counts, C:with counts)
+        [ -n neig ]      neighborhood topology: 4=circ, 6=hexa, 8=rect (default 8)
+        [ -t n | -T e ]  number of training iterations or epochs (epoch = nrows)
+        [ -r r0 -R rN ]  radius at start and end (default r=(x+y)/2, R=0.5)
+        [ -a a0 -A aN ]  learning rate at start and end (default a=0.5, A=1.e-37)
+        [ -H rCool ]     radius cooling: 0=linear, 1=exponential (default 0)
+        [ -h aCool ]     alpha cooling: 0=linear, 1=exponential (default 0)
+        [ -s stdCf ]     sigma = radius * stdCf (default 0.3)
+        [ -v ]           increase verbosity level (default 0, max 2)
 ```
 
 #### sparse-bsom
@@ -68,20 +69,21 @@ To use the *batch* version :
 
 ```
 Usage: sparse-bsom
-        -i infile - input file at libsvm sparse format
-        -y nrows  - number of rows in the codebook
-        -x ncols  - number of columns in the codebook
-        [ -u ] - one based column indices (default is zero based)
-        [ -N ] - normalize the input vectors
-        [ -l codebook ]   - load codebook from binary file
-        [ -o|O codebook ] - output codebook to filename (o:binary, O:text)
-        [ -c|C classes ]  - output classification (c:without counts, C:with counts)
-        [ -n neighborhood ] - neighborhood topology: 4=circ, 6=hexa, 8=rect (default 8)
-        [ -T epochs ] - number of epochs (default 10)
-        [ -r radius0 -R radiusN ] - radius at start and end (default r=(x+y)/2, R=0.5)
-        [ -H radiusCool ] - radius cooling: 0=linear, 1=exponential (default 0)
-        [ -s stdCoeff ]   - sigma = radius * coeff (default 0.3)
-        [ -v ] - increase verbosity level (default 0, max 2)
+        -i infile        input file at libsvm sparse format
+        -y nrows         number of rows in the codebook
+        -x ncols         number of columns in the codebook
+        [ -d dim ]       force the dimension of codebook's vectors
+        [ -u ]           one based column indices (default is zero based)
+        [ -N ]           normalize the input vectors
+        [ -l cb ]        load codebook from binary file
+        [ -o|O cb ]      output codebook to filename (o:binary, O:text)
+        [ -c|C cl ]      output classification (c:without counts, C:with counts)
+        [ -n neig ]      neighborhood topology: 4=circ, 6=hexa, 8=rect (default 8)
+        [ -T epoc ]      number of epochs (default 10)
+        [ -r r0 -R rN ]  radius at start and end (default r=(x+y)/2, R=0.5)
+        [ -H rCool ]     radius cooling: 0=linear, 1=exponential (default 0)
+        [ -s stdCf ]     sigma = radius * stdCf (default 0.3)
+        [ -v ]           increase verbosity level (default 0, max 2)
 ```
 
 To control the number of threads used by OpenMP, set to `OMP_NUM_THREADS` variable to the desired value, for example :
@@ -102,15 +104,15 @@ from sklearn.datasets import load_digits
 from sklearn.metrics import classification_report
 from sparse_som import *
 
-# load some dataset
+# Load some dataset
 dataset = load_digits()
 
 # convert to sparse CSR format
-X = csr_matrix(dataset.data)
+X = csr_matrix(dataset.data, dtype=np.float32)
 
 # setup SOM dimensions
 H, W = 12, 15   # Network height and width
-N = X.shape[1]  # Nb. features (vectors dimension)
+_, N = X.shape  # Nb. features (vectors dimension)
 
 ################ Simple usage ################
 
@@ -120,7 +122,7 @@ print(som.nrows, som.ncols, som.dim)
 
 # reinit the codebook (not needed)
 som.codebook = np.random.rand(H, W, N).\
-                astype(som.codebook.dtype, copy=False)
+                    astype(som.codebook.dtype, copy=False)
 
 # train the SOM
 som.train(X)
@@ -128,18 +130,17 @@ som.train(X)
 # get bmus for the data
 bmus = som.bmus(X)
 
-
 ################ Use classifier ################
 
 # setup SOM classifier (using batch SOM)
 cls = SomClassifier(BSom, H, W, N)
 
-# use SOM calibration
-cls.fit(X, labels=dataset.target)
+# train SOM, do calibration and predict labels
+y = cls.fit_predict(X, labels=dataset.target)
 
-# make predictions
-y = cls.predict(X)
-
+print('Quantization Error: %2.4f' % cls.quant_error)
+print('Topographic  Error: %2.4f' % cls.topog_error)
+print('='*50)
 print(classification_report(dataset.target, y))
 ```
 

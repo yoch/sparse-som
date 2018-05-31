@@ -13,7 +13,7 @@ X /= 255    # scale to 0 - 1 range
 
 # setup SOM dimensions
 H, W = 12, 16   # Network height and width
-N = X.shape[1]  # Nb. features (vectors dimension)
+_, N = X.shape  # Nb. features (vectors dimension)
 
 # setup SOM network
 som = Som(H, W, N) # , verbose=True

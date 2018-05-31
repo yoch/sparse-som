@@ -8,11 +8,11 @@ from sparse_som import *
 dataset = load_digits()
 
 # convert to sparse CSR format
-X = csr_matrix(dataset.data)
+X = csr_matrix(dataset.data, dtype=np.float32)
 
 # setup SOM dimensions
 H, W = 12, 15   # Network height and width
-N = X.shape[1]  # Nb. features (vectors dimension)
+_, N = X.shape  # Nb. features (vectors dimension)
 
 ################ Simple usage ################
 
@@ -22,7 +22,7 @@ print(som.nrows, som.ncols, som.dim)
 
 # reinit the codebook (not needed)
 som.codebook = np.random.rand(H, W, N).\
-                astype(som.codebook.dtype, copy=False)
+                    astype(som.codebook.dtype, copy=False)
 
 # train the SOM
 som.train(X)
@@ -35,10 +35,10 @@ bmus = som.bmus(X)
 # setup SOM classifier (using batch SOM)
 cls = SomClassifier(BSom, H, W, N)
 
-# use SOM calibration
-cls.fit(X, labels=dataset.target)
+# train SOM, do calibration and predict labels
+y = cls.fit_predict(X, labels=dataset.target)
 
-# make predictions
-y = cls.predict(X)
-
+print('Quantization Error: %2.4f' % cls.quant_error)
+print('Topographic  Error: %2.4f' % cls.topog_error)
+print('='*50)
 print(classification_report(dataset.target, y))
