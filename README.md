@@ -195,3 +195,19 @@ The C++ API is not public yet, because things still may change.
 }
 ```
 
+```
+@Inbook{Melka2019,
+    author    = "Melka, Josu{\'e} and Mariage, Jean-Jacques",
+    editor    = "Sabourin, Christophe and Merelo, Juan Julian and Madani, Kurosh and Warwick, Kevin",
+    title     = "Adapting Self-Organizing Map Algorithm to Sparse Data",
+    bookTitle = "Computational Intelligence: 9th International Joint Conference, IJCCI 2017 Funchal-Madeira, Portugal, November 1-3, 2017 Revised Selected Papers",
+    year      = "2019",
+    publisher = "Springer International Publishing",
+    address   = "Cham",
+    pages     = "139--161",
+    isbn      = "978-3-030-16469-0",
+    doi       = "10.1007/978-3-030-16469-0_8",
+    url       = "https://doi.org/10.1007/978-3-030-16469-0_8"
+}
+```
+
