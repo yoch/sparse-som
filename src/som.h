@@ -90,7 +90,7 @@ public:
 
     inline int getverb() const {return m_verbose;}
     inline void setverb(int v) {m_verbose = v;}
-
+    inline topology getTopology() {return m_topo;}
 
 private:
 
@@ -145,6 +145,7 @@ public:
 
     inline int getverb() const {return m_verbose;}
     inline void setverb(int v) {m_verbose = v;}
+    inline topology getTopology() { return m_topo; }
 
 private:
 
@@ -152,7 +153,7 @@ private:
     void setTopology(topology);
     void update(const CSR& data, const float r, const float s, size_t * const bmus);
     //size_t getBmu(const sparse_vec& v, float& d) const;
-    void trainOneEpoch(const CSR&, float radius, float stdCoef, 
+    void trainOneEpoch(const CSR&, float radius, float stdCoef,
                        size_t * const bmus, float * const dsts);
 
     /// attributes

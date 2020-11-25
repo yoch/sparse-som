@@ -1,6 +1,6 @@
 # distutils: language = c++
 # distutils: sources = lib/bsom.cpp, lib/som.cpp, lib/data.cpp
-
+# cython: language_level=3, boundscheck=False
 
 cimport cython
 cimport numpy as np
@@ -26,9 +26,9 @@ cdef extern from "lib/data.h":
 
 
 cdef CSR csrmat_from_spsparse(sm):
-    "convert scipy.sparse.spmatrix to internal csr wrapper"   
+    "convert scipy.sparse.spmatrix to internal csr wrapper"
     # ensure that sm is in the correct format
-    ensure_validity(sm)
+    _ensure_validity(sm)
     # retrieve refs on internal array
     cdef np.ndarray[float, ndim=1] data = sm.data
     cdef np.ndarray[int, ndim=1] indices = sm.indices
@@ -44,7 +44,7 @@ cdef CSR csrmat_from_spsparse(sm):
     return csr
 
 
-def ensure_validity(sm):
+def _ensure_validity(sm):
     # sanity checks
     assert scipy.sparse.isspmatrix_csr(sm), "data must be at CSR format"
     #if not scipy.sparse.isspmatrix(sm):
@@ -54,7 +54,7 @@ def ensure_validity(sm):
     #    print("convert to CSR")
     #    sm = sm.tocsr()
     if not sm.dtype == np.single:
-        #HACK: modify sm in place, 
+        #HACK: modify sm in place,
         #      (works but this is undocumented)
         print("convert %s to float" % sm.dtype)
         sm.data = sm.data.astype(np.single)
@@ -63,6 +63,26 @@ def ensure_validity(sm):
         sm.sort_indices()
     return sm
 
+
+def _umatrix(som):
+    # NOTE this is not implemented for the HEXA case
+    H, W = som.nrows, som.ncols
+    cb = som.codebook
+    umat = np.zeros(shape=(H, W))
+    for i in range(H):
+        for j in range(W):
+            v = cb[i][j]
+            dist_sum = 0.0; ct = 0
+            if i > 0:
+                dist_sum += np.linalg.norm(v, cb[i-1][j]); ct += 1
+            if i+1 < H:
+                dist_sum += np.linalg.norm(v, cb[i+1][j]); ct += 1
+            if j > 0:
+                dist_sum += np.linalg.norm(v, cb[i][j-1]); ct += 1
+            if j+1 < W:
+                dist_sum += np.linalg.norm(v, cb[i][j+1]); ct += 1
+            umat[i][j] = dist_sum / ct
+    return umat
 
 
 cdef extern from "lib/som.h" namespace "som":
@@ -86,6 +106,7 @@ cdef extern from "lib/som.h" namespace "som":
         float * _codebookptr()
         int getverb()
         void setverb(int)
+        topology getTopology()
 
     cdef cppclass _Som "som::Som":
         _Som(size_t, size_t, size_t, topology, int)
@@ -98,6 +119,7 @@ cdef extern from "lib/som.h" namespace "som":
         double * _codebookptr()
         int getverb()
         void setverb(int)
+        topology getTopology()
 
 
 cdef class BSom:
@@ -191,6 +213,18 @@ cdef class BSom:
     def _topographic_error(self, np.ndarray[size_t, ndim=1] bmus, np.ndarray[size_t, ndim=1] seconds, int nsamples):
         return self.c_som.topographicError(<size_t*> bmus.data, <size_t*> seconds.data, nsamples)
 
+    def topographic_error(self, data):
+        bmus, seconds, _ = self._bmus_and_seconds(data)
+        return self._topographic_error(bmus, seconds, data.shape[0])
+
+    def quantization_error(self, data):
+        _, _, mdst = self._bmus_and_seconds(data)
+        return np.sqrt(mdst, out=mdst).mean()
+
+    @property
+    def topol(self):
+        return self.c_som.getTopology()
+
     @property
     def codebook(self):
         """\
@@ -218,6 +252,10 @@ cdef class BSom:
         cdef float* data = self.c_som._codebookptr()
         cdef view.array view = <float[:y,:x,:z]> data
         view[:,:,:] = arr.data
+
+    @property
+    def umatrix(self):
+        return _umatrix(self)
 
     @property
     def nrows(self):
@@ -352,6 +390,18 @@ cdef class Som:
     def _topographic_error(self, np.ndarray[size_t, ndim=1] bmus, np.ndarray[size_t, ndim=1] seconds, int nsamples):
         return self.c_som.topographicError(<size_t*> bmus.data, <size_t*> seconds.data, nsamples)
 
+    def topographic_error(self, data):
+        bmus, seconds, _ = self._bmus_and_seconds(data)
+        return self._topographic_error(bmus, seconds, data.shape[0])
+
+    def quantization_error(self, data):
+        _, _, mdst = self._bmus_and_seconds(data)
+        return np.sqrt(mdst, out=mdst).mean()
+
+    @property
+    def topol(self):
+        return self.c_som.getTopology()
+
     @property
     def codebook(self):
         """\
@@ -379,6 +429,10 @@ cdef class Som:
         cdef double * data = self.c_som._codebookptr()
         cdef view.array vdata = <double[:y,:x,:z]> data
         vdata[:,:,:] = arr.data
+
+    @property
+    def umatrix(self):
+        return _umatrix(self)
 
     @property
     def nrows(self):
