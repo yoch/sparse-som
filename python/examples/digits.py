@@ -33,12 +33,14 @@ bmus = som.bmus(X)
 ################ Use classifier ################
 
 # setup SOM classifier (using batch SOM)
-cls = SomClassifier(BSom, H, W, N)
+clf = SomClassifier(BSom) #, H, W, N)
+#clf.setup(h=12, w=15)
 
 # train SOM, do calibration and predict labels
-y = cls.fit_predict(X, labels=dataset.target)
+y = clf.fit_predict(X, labels=dataset.target)
 
-print('Quantization Error: %2.4f' % cls.quant_error)
-print('Topographic  Error: %2.4f' % cls.topog_error)
+print(clf)
+print('Quantization Error: %2.4f' % clf.quant_error)
+print('Topographic  Error: %2.4f' % clf.topog_error)
 print('='*50)
 print(classification_report(dataset.target, y))

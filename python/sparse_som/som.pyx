@@ -9,6 +9,20 @@ from libcpp cimport bool
 import numpy as np
 import scipy.sparse
 
+try:
+    from sklearn.metrics.pairwise import pairwise_distances
+except ImportError:
+    HAS_SKLEARN = False
+
+    def eucdist(codebook, data):
+        dst = -2 * data.dot(codebook.T)
+        dst += (codebook ** 2).sum(axis=1)
+        dst += data.power(2).sum(axis=1)
+        np.clip(dst, 0, None, out=dst)
+        np.sqrt(dst, out=dst)
+        return dst
+else:
+    HAS_SKLEARN = True
 
 
 cdef extern from "lib/data.h":
@@ -168,6 +182,17 @@ cdef class BSom:
         #np.sqrt(mdst, out=mdst)
         # format bmus
         return self._to_bmus(bmus) #, mdst
+
+    def activation_map(self, data):
+        if not HAS_SKLEARN:
+            return eucdist(self.codebook, data)
+        codebook = self.codebook
+        shape = codebook.shape
+        codebook.shape = -1, self.dim
+        #dst = euclidean_distances(codebook, data)
+        dst = pairwise_distances(codebook, data, metric='euclidean', njobs=-1)
+        codebook.shape = shape
+        return dst
 
     def _bmus_and_seconds(self, data):
         """\
@@ -329,6 +354,17 @@ cdef class Som:
         ## correct distances
         #np.sqrt(mdst, out=mdst)
         return self._to_bmus(bmus) #, mdst
+
+    def activation_map(self, data):
+        if not HAS_SKLEARN:
+            return eucdist(self.codebook, data)
+        codebook = self.codebook
+        shape = codebook.shape
+        codebook.shape = -1, self.dim
+        #dst = euclidean_distances(codebook, data)
+        dst = pairwise_distances(codebook, data, metric='euclidean', njobs=-1)
+        codebook.shape = shape
+        return dst
 
     def _bmus_and_seconds(self, data):
         """\

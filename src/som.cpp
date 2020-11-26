@@ -256,7 +256,7 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
               stopI = min((int)m_height-1,y+r),
               startJ = max(0,x-r),
               stopJ = min((int)m_width-1,x+r);
-    const double sig2 = 2 * squared(radius * stdCoeff);
+    const double gamma = -1. / (2 * squared(radius * stdCoeff));
 
     const int ind = data.indptr[n];
     const int vsz = data.indptr[n+1] - ind;
@@ -276,7 +276,7 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
                 continue;
 
             const size_t idx = i * m_width + j;
-            const double neighborhood = exp(-d2 / sig2);
+            const double neighborhood = exp(gamma * d2);
             const double a = alpha * neighborhood;
             const double b = 1. - a; // beware, if b==0 then calculus goes wrong
 
@@ -300,7 +300,7 @@ void Som::update(const CSR& data, size_t n, size_t kStar, double radius, double 
 void Som::getBmus(const CSR& data, size_t * const bmus, double * const dsts, size_t * const second, bool correct) const
 {
     assert(data._sqsum != NULL || !correct);
-    
+
     double * sdsts = NULL;
 
     fill_n(bmus, data.nrows, 0);
@@ -494,6 +494,7 @@ void Som::train(const CSR& data, size_t tmax,
 double Som::topographicError(size_t * const bmus, size_t * const second, size_t n) const
 {
     size_t errors = 0;
+#pragma omp parallel for reduction(+:errors)
     for (size_t k=0; k<n; ++k)
     {
         double d2;

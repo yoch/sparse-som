@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import scipy.sparse as sp
+from sklearn.metrics import f1_score
 from sparse_som import *
 
 
@@ -116,8 +117,6 @@ def test_bsom_bmus(random_matrix):
     assert som.bmus(random_matrix).shape == (n, 2)
 
 #TODO: test classifier as well
-
-from sklearn.metrics import f1_score
 
 @pytest.fixture(scope="module")
 def digits():
