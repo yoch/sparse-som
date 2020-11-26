@@ -22,21 +22,21 @@ else:
 
 ext = '.pyx' if USE_CYTHON else '.cpp'
 
-extensions = [Extension('sparse_som.som',
-                sources=[
-                    'sparse_som/som'+ext,
-                    'sparse_som/lib/som.cpp',
-                    'sparse_som/lib/bsom.cpp',
-                    'sparse_som/lib/data.cpp',
-                ],
-                extra_objects=[
-                    'sparse_som/lib/som.h',
-                    'sparse_som/lib/data.h',
-                ],
-                extra_compile_args=extra_compile_args,
-                extra_link_args=extra_link_args,
-                include_dirs=['sparse_som/'],
-                language='c++')]
+extensions = [
+    Extension(
+        'sparse_som.som',
+        sources=[
+            'sparse_som/som'+ext,
+            'sparse_som/lib/som.cpp',
+            'sparse_som/lib/bsom.cpp',
+            'sparse_som/lib/data.cpp',
+        ],
+        extra_compile_args=extra_compile_args,
+        extra_link_args=extra_link_args,
+        include_dirs=['sparse_som/'],
+        language='c++'
+    )
+]
 
 
 class NumpyBuildExt(build_ext):
