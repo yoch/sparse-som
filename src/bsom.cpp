@@ -238,7 +238,7 @@ void BSom::getBmus(const CSR& data, size_t * const bmus, float * const dsts, siz
 void BSom::update(const CSR& data, const float radius, const float stdCoef, size_t * const bmus)
 {
 //    SKIPPED = 0;
-    const double sig2 = 2 * squared(radius * stdCoef);
+    const double gamma = -1. / (2. * squared(radius * stdCoef));
 
 #pragma omp parallel // shared(data)
  {
@@ -270,7 +270,7 @@ void BSom::update(const CSR& data, const float radius, const float stdCoef, size
             if (fdist(y, x, i, j, d2) > radius+1)
                 continue;
 
-            const float h = exp(-d2 / sig2);
+            const float h = exp(gamma * d2);
 
             denominator += h;
             for (int it=0; it<vsz; ++it)
@@ -302,14 +302,15 @@ void BSom::update(const CSR& data, const float radius, const float stdCoef, size
 double BSom::topographicError(size_t * const bmus, size_t * const second, size_t n) const
 {
     size_t errors = 0;
+#pragma omp parallel for reduction(+: errors)
     for (size_t k=0; k<n; ++k)
     {
         double d2;
-        const int y = bmus[k] / m_width,
-                  x = bmus[k] % m_width,
-                  i = second[k] / m_width,
-                  j = second[k] % m_width;
-        if (fdist(y, x, i, j, d2) > 1)
+        const int y0 = bmus[k] / m_width,
+                  x0 = bmus[k] % m_width,
+                  y1 = second[k] / m_width,
+                  x1 = second[k] % m_width;
+        if (fdist(y0, x0, y1, x1, d2) > 1)
         {
             errors++;
         }
@@ -318,7 +319,7 @@ double BSom::topographicError(size_t * const bmus, size_t * const second, size_t
     return (double) errors / n;
 }
 
-void BSom::trainOneEpoch(const CSR& data, float radius, float stdCoef, 
+void BSom::trainOneEpoch(const CSR& data, float radius, float stdCoef,
                         size_t * const bmus, float * const dsts)
 {
 
@@ -345,6 +346,7 @@ void BSom::trainOneEpoch(const CSR& data, float radius, float stdCoef,
         if (correct)
         {
             double Qe = 0;
+#pragma omp parallel for reduction(+: Qe)
             for (int i=0; i<data.nrows; ++i)
             {
                 Qe += sqrt(dsts[i]);
@@ -416,7 +418,7 @@ void BSom::train(const CSR& data, size_t tmax,
         {
             size_t * second = new size_t[data.nrows];
             float * sdsts = new float[data.nrows];
-            
+
             getBmus(data, bmus, dsts, second, sdsts);
 
             // unable to compute QE if we don't have X^2
@@ -438,7 +440,7 @@ void BSom::train(const CSR& data, size_t tmax,
                 // Note: in fact, this is the topographic error of the previous step (before the update)
                 cout << " - TE: " << topographicError(bmus, second, data.nrows);
             }
-            
+
             delete [] second;
             delete [] sdsts;
 
@@ -450,7 +452,7 @@ void BSom::train(const CSR& data, size_t tmax,
 
         cout << "Finished: elapsed " << tm << "s" << endl;
     }
-    
+
     delete [] bmus;
     delete [] dsts;
 }
