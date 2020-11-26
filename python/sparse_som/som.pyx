@@ -9,6 +9,20 @@ from libcpp cimport bool
 import numpy as np
 import scipy.sparse
 
+try:
+    from sklearn.metrics.pairwise import pairwise_distances
+except ImportError:
+    HAS_SKLEARN = False
+
+    def eucdist(codebook, data):
+        dst = -2 * data.dot(codebook.T)
+        dst += (codebook ** 2).sum(axis=1)
+        dst += data.power(2).sum(axis=1)
+        np.clip(dst, 0, None, out=dst)
+        np.sqrt(dst, out=dst)
+        return dst
+else:
+    HAS_SKLEARN = True
 
 
 cdef extern from "lib/data.h":
@@ -74,15 +88,26 @@ def _umatrix(som):
             v = cb[i][j]
             dist_sum = 0.0; ct = 0
             if i > 0:
-                dist_sum += np.linalg.norm(v, cb[i-1][j]); ct += 1
+                dist_sum += np.linalg.norm(v - cb[i-1][j]); ct += 1
             if i+1 < H:
-                dist_sum += np.linalg.norm(v, cb[i+1][j]); ct += 1
+                dist_sum += np.linalg.norm(v - cb[i+1][j]); ct += 1
             if j > 0:
-                dist_sum += np.linalg.norm(v, cb[i][j-1]); ct += 1
+                dist_sum += np.linalg.norm(v - cb[i][j-1]); ct += 1
             if j+1 < W:
-                dist_sum += np.linalg.norm(v, cb[i][j+1]); ct += 1
+                dist_sum += np.linalg.norm(v - cb[i][j+1]); ct += 1
             umat[i][j] = dist_sum / ct
     return umat
+
+
+def _activation_map(codebook, data):
+    if not HAS_SKLEARN:
+        return eucdist(codebook, data)
+    shape = codebook.shape
+    codebook.shape = -1, shape[-1]
+    #dst = euclidean_distances(codebook, data)
+    dst = pairwise_distances(codebook, data, metric='euclidean', njobs=-1)
+    codebook.shape = shape
+    return dst
 
 
 cdef extern from "lib/som.h" namespace "som":
@@ -171,7 +196,7 @@ cdef class BSom:
         YX = np.unravel_index(bmus, (self.nrows, self.ncols))
         return np.vstack(YX).transpose()
 
-    def bmus(self, data):
+    def bmus(self, data, tg_error=False, qt_error=False):
         """\
         Return the best match units for data.
 
@@ -180,16 +205,15 @@ cdef class BSom:
         :returns: an array of the bmus coordinates (y,x)
         :rtype: 2D :class:`numpy.ndarray`
         """
-        cdef CSR m = csrmat_from_spsparse(data)
-        ## important: initialize X^2 because we want correct mdst as result
-        #m.initSqSum()
-        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
-        cdef np.ndarray[float, ndim=1] mdst = np.empty(m.nrows, dtype=np.single)
-        self.c_som.getBmus(m, <size_t*> bmus.data, <float*> mdst.data, NULL, False)
-        ## correct distances
-        #np.sqrt(mdst, out=mdst)
-        # format bmus
-        return self._to_bmus(bmus) #, mdst
+        bmus, seconds, mdst = self._bmus_and_seconds(data)
+        if tg_error:
+            self.topographic_error = self._topographic_error(bmus, seconds, data.shape[0])
+        else:
+            self.topographic_error = None
+        if qt_error:
+            self.quantization_error = np.sqrt(mdst, out=mdst).mean()
+        else:
+            self.quantization_error = None
 
     def _bmus_and_seconds(self, data):
         """\
@@ -213,13 +237,8 @@ cdef class BSom:
     def _topographic_error(self, np.ndarray[size_t, ndim=1] bmus, np.ndarray[size_t, ndim=1] seconds, int nsamples):
         return self.c_som.topographicError(<size_t*> bmus.data, <size_t*> seconds.data, nsamples)
 
-    def topographic_error(self, data):
-        bmus, seconds, _ = self._bmus_and_seconds(data)
-        return self._topographic_error(bmus, seconds, data.shape[0])
-
-    def quantization_error(self, data):
-        _, _, mdst = self._bmus_and_seconds(data)
-        return np.sqrt(mdst, out=mdst).mean()
+    def activation_map(self, data):
+        return _activation_map(self.codebook, data)
 
     @property
     def topol(self):
@@ -255,6 +274,10 @@ cdef class BSom:
 
     @property
     def umatrix(self):
+        """\
+        :returns: the network U-matrix.
+        :rtype: 2D :class:`numpy.ndarray`
+        """
         return _umatrix(self)
 
     @property
@@ -349,7 +372,7 @@ cdef class Som:
         YX = np.unravel_index(bmus, (self.nrows, self.ncols))
         return np.vstack(YX).transpose()
 
-    def bmus(self, data):
+    def bmus(self, data, tg_error=False, qt_error=False):
         """\
         Return the best match units for data.
 
@@ -358,15 +381,16 @@ cdef class Som:
         :returns: an array of the bmus coordinates (y,x)
         :rtype: 2D :class:`numpy.ndarray`
         """
-        cdef CSR m = csrmat_from_spsparse(data)
-        ## important: initialize X^2 because we want correct mdst as result
-        #m.initSqSum()
-        cdef np.ndarray[size_t, ndim=1] bmus = np.empty(m.nrows, dtype=np.uintp)
-        cdef np.ndarray[double, ndim=1] mdst = np.empty(m.nrows, dtype=np.double)
-        self.c_som.getBmus(m, <size_t*> bmus.data, <double*> mdst.data, NULL, False)
-        ## correct distances
-        #np.sqrt(mdst, out=mdst)
-        return self._to_bmus(bmus) #, mdst
+        bmus, seconds, mdst = self._bmus_and_seconds(data)
+        if tg_error:
+            self.topographic_error = self._topographic_error(bmus, seconds, data.shape[0])
+        else:
+            self.topographic_error = None
+        if qt_error:
+            self.quantization_error = np.sqrt(mdst, out=mdst).mean()
+        else:
+            self.quantization_error = None
+        return self._to_bmus(bmus)
 
     def _bmus_and_seconds(self, data):
         """\
@@ -390,13 +414,8 @@ cdef class Som:
     def _topographic_error(self, np.ndarray[size_t, ndim=1] bmus, np.ndarray[size_t, ndim=1] seconds, int nsamples):
         return self.c_som.topographicError(<size_t*> bmus.data, <size_t*> seconds.data, nsamples)
 
-    def topographic_error(self, data):
-        bmus, seconds, _ = self._bmus_and_seconds(data)
-        return self._topographic_error(bmus, seconds, data.shape[0])
-
-    def quantization_error(self, data):
-        _, _, mdst = self._bmus_and_seconds(data)
-        return np.sqrt(mdst, out=mdst).mean()
+    def activation_map(self, data):
+        return _activation_map(self.codebook, data)
 
     @property
     def topol(self):
@@ -432,6 +451,10 @@ cdef class Som:
 
     @property
     def umatrix(self):
+        """\
+        :returns: the network U-matrix.
+        :rtype: 2D :class:`numpy.ndarray`
+        """
         return _umatrix(self)
 
     @property
