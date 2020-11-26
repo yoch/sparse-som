@@ -50,7 +50,7 @@ class NumpyBuildExt(build_ext):
 setup(
   name = 'sparse_som',
   packages = ['sparse_som'],
-  version = '0.5.5',
+  version = '0.6.0',
   description = 'Self-Organizing Maps for sparse inputs in python',
   author = 'J. Melka',
   url = 'https://github.com/yoch/sparse-som',

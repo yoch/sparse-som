@@ -40,17 +40,19 @@ classes
 *Self-Organizing Maps wrappers for python, intended for sparse input data.*
 
 .. autoclass:: sparse_som.BSom
-    :members: codebook, nrows, ncols, dim
+    :members: codebook, nrows, ncols, dim, umatrix
 
     .. automethod:: train(data, epochs=10, r0=0, rN=0.5, std=0.3, cool=cooling.LINEAR)
-    .. automethod:: bmus(data)
+    .. automethod:: bmus(data, tg_error=False, qt_error=False)
+    .. automethod:: activation_map(data)
 
 
 .. autoclass:: sparse_som.Som
-    :members: codebook, nrows, ncols, dim
+    :members: codebook, nrows, ncols, dim, umatrix
 
     .. automethod:: train(data, tmax, r0=0, a0=0.5, rN=0.5, aN=0., std=0.3, rcool=cooling.LINEAR, acool=cooling.LINEAR)
-    .. automethod:: bmus(data)
+    .. automethod:: bmus(data, tg_error=False, qt_error=False)
+    .. automethod:: activation_map(data)
 
 
 

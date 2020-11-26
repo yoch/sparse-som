@@ -203,6 +203,10 @@ cdef class BSom:
 
         :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
         :type data: :class:`scipy.sparse.spmatrix`
+        :param tg_error: indicates whether to calculate the topographic error (default: `False`)
+        :type tg_error: bool
+        :param qt_error: indicates whether to calculate the quantization error (default: `False`)
+        :type qt_error: bool
         :returns: an array of the bmus coordinates (y,x)
         :rtype: 2D :class:`numpy.ndarray`
         """
@@ -218,14 +222,6 @@ cdef class BSom:
         return self._to_bmus(bmus)
 
     def _bmus_and_seconds(self, data):
-        """\
-        Return the best match units for data.
-
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
-        :type data: :class:`scipy.sparse.spmatrix`
-        :returns: an array of the bmus coordinates (y,x)
-        :rtype: 2D :class:`numpy.ndarray`
-        """
         cdef CSR m = csrmat_from_spsparse(data)
         # important: initialize X^2 because we want correct mdst as result
         m.initSqSum()
@@ -240,6 +236,14 @@ cdef class BSom:
         return self.c_som.topographicError(<size_t*> bmus.data, <size_t*> seconds.data, nsamples)
 
     def activation_map(self, data):
+        """\
+        Return the distance between each data sample and each codebook unit.
+
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
+        :type data: :class:`scipy.sparse.spmatrix`
+        :returns: an array with shape (nsample, nunits)
+        :rtype: 2D :class:`numpy.ndarray`
+        """
         return _activation_map(self.codebook, data)
 
     @property
@@ -381,6 +385,10 @@ cdef class Som:
 
         :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
         :type data: :class:`scipy.sparse.spmatrix`
+        :param tg_error: indicates whether to calculate the topographic error (default: `False`)
+        :type tg_error: bool
+        :param qt_error: indicates whether to calculate the quantization error (default: `False`)
+        :type qt_error: bool
         :returns: an array of the bmus coordinates (y,x)
         :rtype: 2D :class:`numpy.ndarray`
         """
@@ -396,14 +404,6 @@ cdef class Som:
         return self._to_bmus(bmus)
 
     def _bmus_and_seconds(self, data):
-        """\
-        Return the best match units for data.
-
-        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
-        :type data: :class:`scipy.sparse.spmatrix`
-        :returns: an array of the bmus coordinates (y,x)
-        :rtype: 2D :class:`numpy.ndarray`
-        """
         cdef CSR m = csrmat_from_spsparse(data)
         # important: initialize X^2 because we want correct mdst as result
         m.initSqSum()
@@ -418,6 +418,14 @@ cdef class Som:
         return self.c_som.topographicError(<size_t*> bmus.data, <size_t*> seconds.data, nsamples)
 
     def activation_map(self, data):
+        """\
+        Return the distance between each data sample and each codebook unit.
+
+        :param data: sparse input matrix (ideally :class:`csr_matrix` of `numpy.single`)
+        :type data: :class:`scipy.sparse.spmatrix`
+        :returns: an array with shape (nsample, nunits)
+        :rtype: 2D :class:`numpy.ndarray`
+        """
         return _activation_map(self.codebook, data)
 
     @property
