@@ -85,16 +85,16 @@ def _umatrix(som):
     umat = np.zeros(shape=(H, W))
     for i in range(H):
         for j in range(W):
-            v = cb[i][j]
+            v = cb[i, j]
             dist_sum = 0.0; ct = 0
             if i > 0:
-                dist_sum += np.linalg.norm(v - cb[i-1][j]); ct += 1
+                dist_sum += np.linalg.norm(v - cb[i-1, j]); ct += 1
             if i+1 < H:
-                dist_sum += np.linalg.norm(v - cb[i+1][j]); ct += 1
+                dist_sum += np.linalg.norm(v - cb[i+1, j]); ct += 1
             if j > 0:
-                dist_sum += np.linalg.norm(v - cb[i][j-1]); ct += 1
+                dist_sum += np.linalg.norm(v - cb[i, j-1]); ct += 1
             if j+1 < W:
-                dist_sum += np.linalg.norm(v - cb[i][j+1]); ct += 1
+                dist_sum += np.linalg.norm(v - cb[i, j+1]); ct += 1
             umat[i][j] = dist_sum / ct
     return umat
 
@@ -165,6 +165,7 @@ cdef class BSom:
     """
 
     cdef _BSom * c_som
+    cdef dict __dict__
 
     def __cinit__(self, size_t h, size_t w, size_t d, topology topol=topology.RECT, int verbose=0):
         self.c_som = new _BSom(h, w, d, topol, verbose)
@@ -214,6 +215,7 @@ cdef class BSom:
             self.quantization_error = np.sqrt(mdst, out=mdst).mean()
         else:
             self.quantization_error = None
+        return self._to_bmus(bmus)
 
     def _bmus_and_seconds(self, data):
         """\
@@ -330,6 +332,7 @@ cdef class Som:
     """
 
     cdef _Som * c_som
+    cdef dict __dict__
 
     def __cinit__(self, size_t h, size_t w, size_t d, topology topol=topology.RECT, int verbose=0):
         self.c_som = new _Som(h, w, d, topol, verbose)
