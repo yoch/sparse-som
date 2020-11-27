@@ -65,6 +65,18 @@ def test_som_bmus(random_matrix):
     som.train(random_matrix, tmax=n * 5)
     assert som.bmus(random_matrix).shape == (n, 2)
 
+def test_som_umatrix(random_matrix):
+    n, d = random_matrix.shape
+    som = Som(10, 15, d)
+    som.train(random_matrix, tmax=n * 5)
+    assert som.umatrix.shape == (10, 15)
+
+def test_som_activation_map(random_matrix):
+    n, d = random_matrix.shape
+    som = Som(10, 15, d)
+    som.train(random_matrix, tmax=n * 5)
+    activation = som.activation_map(random_matrix)
+    assert activation.shape == (10 * 15, n)
 
 ########################## BSOM ##########################
 
@@ -114,6 +126,19 @@ def test_bsom_bmus(random_matrix):
     som = BSom(10, 15, d)
     som.train(random_matrix, epochs=5)
     assert som.bmus(random_matrix).shape == (n, 2)
+
+def test_bsom_umatrix(random_matrix):
+    n, d = random_matrix.shape
+    som = BSom(10, 15, d)
+    som.train(random_matrix, epochs=5)
+    assert som.umatrix.shape == (10, 15)
+
+def test_bsom_activation_map(random_matrix):
+    n, d = random_matrix.shape
+    som = BSom(10, 15, d)
+    som.train(random_matrix, epochs=5)
+    activation = som.activation_map(random_matrix)
+    assert activation.shape == (10 * 15, n)
 
 #TODO: test classifier as well
 
