@@ -34,7 +34,8 @@ extensions = [
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
         include_dirs=['sparse_som/'],
-        language='c++'
+        language='c++',
+        #define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
     )
 ]
 
@@ -50,7 +51,7 @@ class NumpyBuildExt(build_ext):
 setup(
   name = 'sparse_som',
   packages = ['sparse_som'],
-  version = '0.6.0',
+  version = '0.6.1',
   description = 'Self-Organizing Maps for sparse inputs in python',
   author = 'J. Melka',
   url = 'https://github.com/yoch/sparse-som',

@@ -78,24 +78,35 @@ def _ensure_validity(sm):
     return sm
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def _umatrix(som):
     # NOTE this is not implemented for the HEXA case
-    H, W = som.nrows, som.ncols
-    cb = som.codebook
-    umat = np.zeros(shape=(H, W))
+    # [_cb.dtype, ndim=2]
+    cdef np.ndarray cb = som.codebook
+    cdef size_t H = som.nrows
+    cdef size_t W = som.ncols
+    cdef size_t i, j, ct
+    cdef double[:,:] umat = np.zeros(shape=(H, W))
+    cdef float dst, dst2
     for i in range(H):
         for j in range(W):
-            v = cb[i, j]
-            dist_sum = 0.0; ct = 0
+            ct = 0
             if i > 0:
-                dist_sum += np.linalg.norm(v - cb[i-1, j]); ct += 1
+                ct += 1
             if i+1 < H:
-                dist_sum += np.linalg.norm(v - cb[i+1, j]); ct += 1
+                dst1 = np.linalg.norm(cb[i, j] - cb[i+1, j])
+                umat[i, j] += dst1
+                umat[i + 1, j] += dst1
+                ct += 1
             if j > 0:
-                dist_sum += np.linalg.norm(v - cb[i, j-1]); ct += 1
+                ct += 1
             if j+1 < W:
-                dist_sum += np.linalg.norm(v - cb[i, j+1]); ct += 1
-            umat[i][j] = dist_sum / ct
+                dst2 = np.linalg.norm(cb[i, j] - cb[i, j+1])
+                umat[i, j] += dst1
+                umat[i, j + 1] += dst1
+                ct += 1
+            umat[i, j] /= ct
     return umat
 
 
@@ -105,7 +116,7 @@ def _activation_map(codebook, data):
     shape = codebook.shape
     codebook.shape = -1, shape[-1]
     #dst = euclidean_distances(codebook, data)
-    dst = pairwise_distances(codebook, data, metric='euclidean', njobs=-1)
+    dst = pairwise_distances(codebook, data, metric='euclidean', n_jobs=-1)
     codebook.shape = shape
     return dst
 
