@@ -3,9 +3,22 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-**************************************
-Welcome to sparse_som's documentation!
-**************************************
+.. meta::
+   :description: sparse-som: efficient Self-Organizing Map (SOM, Kohonen map) for sparse, high-dimensional data (e.g. text) in Python, with online and batch (OpenMP) algorithms.
+   :keywords: self-organizing map, SOM, Kohonen, sparse data, libsvm, OpenMP, clustering, unsupervised learning, Python
+
+************************
+sparse-som documentation
+************************
+
+Python package for the efficient Self-Organizing Map (SOM, Kohonen map)
+implementation of sparse-som, intended for sparse, high-dimensional data
+(e.g. text).
+
+* Install: ``pip install sparse-som`` (`PyPI <https://pypi.org/project/sparse-som/>`_)
+* Source code and issue tracker: `GitHub <https://github.com/yoch/sparse-som>`_
+* Paper: `Efficient Implementation of Self-Organizing Map for Sparse Input Data
+  <https://doi.org/10.5220/0006499500540063>`_ (IJCCI 2017)
 
 
 .. toctree::

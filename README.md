@@ -1,10 +1,15 @@
 # sparse-som
 
-Efficient Implementation of Self-Organizing Map for Sparse Input Data.
+[![PyPI](https://img.shields.io/pypi/v/sparse-som.svg)](https://pypi.org/project/sparse-som/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/yoch/sparse-som/blob/master/LICENSE)
+[![DOI](https://img.shields.io/badge/DOI-10.5220%2F0006499500540063-blue.svg)](https://doi.org/10.5220/0006499500540063)
 
-This program uses an algorithm especially intended for sparse data, 
-which much faster than the classical one on very sparse datasets
-(time-complexity depend to non-zero values only).
+Efficient implementation of the Self-Organizing Map (SOM, Kohonen map) for sparse, high-dimensional data (e.g. text),
+with command-line tools (C++) and a Python package.
+
+This program uses an algorithm especially intended for sparse data,
+which is much faster than the classical one on very sparse datasets
+(time complexity depends on non-zero values only).
 
 #### Main features
 
@@ -12,20 +17,20 @@ which much faster than the classical one on very sparse datasets
 - Support both online and batch SOM algorithms.
 - Parallel batch implementation (OpenMP).
 - OS independent.
-- [Python](https://pypi.python.org/pypi?:action=display&name=sparse-som) support.
+- [Python](https://pypi.org/project/sparse-som/) support.
 
 ## Build
 
 The simplest way to build the cli tools from the main directory : `cd src && make all`.
 After the compilation terminates, the resulting executables may be found in the `build` directory.
 
-GCC is reccomended, but you can use another compiler if you want. C++11 support is required.
+GCC is recommended, but you can use another compiler if you want. C++11 support is required.
 OpenMP support is required to take advantage of parallelism (sparse-bsom).
 
 
 ## Install
 
-####
+#### CLI
 
 No install required.
 
@@ -86,7 +91,7 @@ Usage: sparse-bsom
         [ -v ]           increase verbosity level (default 0, max 2)
 ```
 
-To control the number of threads used by OpenMP, set to `OMP_NUM_THREADS` variable to the desired value, for example :
+To control the number of threads used by OpenMP, set the `OMP_NUM_THREADS` variable to the desired value, for example :
 
 ```
 OMP_NUM_THREADS=4 sparse-bsom ...
@@ -167,7 +172,7 @@ Each line contains an instance and is ended by a '\n' character. The pair `<inde
 
 ### Python documentation
 
-The python documentation can be found at: http://sparse-som.readthedocs.io/en/latest/
+The python documentation can be found at: https://sparse-som.readthedocs.io/en/latest/
 
 
 ### API
@@ -176,6 +181,8 @@ The C++ API is not public yet, because things still may change.
 
 
 ## How to cite this work
+
+Citation metadata is also available in [`CITATION.cff`](CITATION.cff).
 
 ```
 @InProceedings{melka-mariage:ijcci17,
