@@ -1,5 +1,17 @@
+import io
 import os
 from setuptools import setup, Extension
+
+
+DESCRIPTION = 'Self-Organizing Maps for sparse inputs in python'
+
+# README.md sits next to this file and ships in the sdist (see MANIFEST.in);
+# fall back to the short description if it is missing.
+try:
+    with io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'README.md'), encoding='utf-8') as f:
+        LONG_DESCRIPTION = f.read()
+except IOError:
+    LONG_DESCRIPTION = DESCRIPTION
 
 
 try:
@@ -52,9 +64,21 @@ setup(
   name = 'sparse_som',
   packages = ['sparse_som'],
   version = '0.6.1',
-  description = 'Self-Organizing Maps for sparse inputs in python',
+  description = DESCRIPTION,
+  long_description = LONG_DESCRIPTION,
+  long_description_content_type = 'text/markdown',
   author = 'J. Melka',
   url = 'https://github.com/yoch/sparse-som',
+  project_urls = {
+    'Documentation': 'https://sparse-som.readthedocs.io',
+    'Source': 'https://github.com/yoch/sparse-som',
+    'Issues': 'https://github.com/yoch/sparse-som/issues',
+    'Paper': 'https://doi.org/10.5220/0006499500540063',
+  },
+  keywords = [
+    'self-organizing-map', 'som', 'kohonen', 'sparse', 'libsvm',
+    'openmp', 'clustering', 'unsupervised-learning',
+  ],
   ext_modules = extensions,
   cmdclass = {'build_ext': NumpyBuildExt},
   license = 'GPL3',

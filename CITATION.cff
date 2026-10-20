@@ -1,0 +1,69 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper below."
+type: software
+title: "sparse-som"
+abstract: "Efficient implementation of the Self-Organizing Map (SOM, Kohonen map) for sparse, high-dimensional data."
+authors:
+  - family-names: Melka
+    given-names: Josué
+repository-code: "https://github.com/yoch/sparse-som"
+url: "https://sparse-som.readthedocs.io"
+keywords:
+  - self-organizing-map
+  - som
+  - kohonen
+  - sparse
+  - libsvm
+  - openmp
+  - clustering
+  - unsupervised-learning
+preferred-citation:
+  type: conference-paper
+  title: "Efficient Implementation of Self-Organizing Map for Sparse Input Data"
+  authors:
+    - family-names: Melka
+      given-names: Josué
+    - family-names: Mariage
+      given-names: Jean-Jacques
+  collection-title: "Proceedings of the 9th International Joint Conference on Computational Intelligence: IJCCI"
+  conference:
+    name: "9th International Joint Conference on Computational Intelligence (IJCCI)"
+    location: "Funchal, Madeira, Portugal"
+  volume: 1
+  start: 54
+  end: 63
+  year: 2017
+  month: 11
+  publisher:
+    name: SciTePress
+  isbn: "978-989-758-274-5"
+  doi: "10.5220/0006499500540063"
+  url: "http://www.ai.univ-paris8.fr/~jmelka/IJCCI_2017_20.pdf"
+references:
+  - type: generic
+    title: "Adapting Self-Organizing Map Algorithm to Sparse Data"
+    authors:
+      - family-names: Melka
+        given-names: Josué
+      - family-names: Mariage
+        given-names: Jean-Jacques
+    editors:
+      - family-names: Sabourin
+        given-names: Christophe
+      - family-names: Merelo
+        given-names: Juan Julian
+      - family-names: Madani
+        given-names: Kurosh
+      - family-names: Warwick
+        given-names: Kevin
+    collection-title: "Computational Intelligence: 9th International Joint Conference, IJCCI 2017 Funchal-Madeira, Portugal, November 1-3, 2017 Revised Selected Papers"
+    collection-type: book
+    start: 139
+    end: 161
+    year: 2019
+    publisher:
+      name: "Springer International Publishing"
+      city: Cham
+    isbn: "978-3-030-16469-0"
+    doi: "10.1007/978-3-030-16469-0_8"
+    url: "https://doi.org/10.1007/978-3-030-16469-0_8"

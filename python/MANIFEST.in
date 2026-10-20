@@ -1,2 +1,3 @@
+include README.md
 include sparse_som/lib/data.h
 include sparse_som/lib/som.h
