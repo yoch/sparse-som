@@ -1,5 +1,4 @@
 # distutils: language = c++
-# distutils: sources = lib/bsom.cpp, lib/som.cpp, lib/data.cpp
 # cython: language_level=3, boundscheck=False
 
 cimport cython
