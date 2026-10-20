@@ -192,3 +192,30 @@ def test_som_classifier_histogram(digits, cls):
     clf.fit(digits.data, digits.target)
     hist = clf.histogram()
     assert hist.sum() == n
+
+
+########################## activation map ##########################
+
+@pytest.mark.parametrize('cls', [Som, BSom])
+def test_activation_map_without_sklearn(random_matrix, monkeypatch, cls):
+    from sparse_som import som as som_module
+    n, d = random_matrix.shape
+    som = cls(10, 15, d)
+    expected = som.activation_map(random_matrix)
+    monkeypatch.setattr(som_module, 'HAS_SKLEARN', False)
+    activation = som.activation_map(random_matrix)
+    assert activation.shape == (10 * 15, n)
+    np.testing.assert_allclose(activation, expected, rtol=1e-4, atol=1e-4)
+
+
+def test_activation_map_keeps_codebook_shape(random_matrix):
+    n, d = random_matrix.shape
+    som = Som(10, 15, d)
+    som.activation_map(random_matrix)
+    assert som.codebook.shape == (10, 15, d)
+
+
+def test_version_matches_metadata():
+    from importlib.metadata import version
+    import sparse_som
+    assert sparse_som.__version__ == version('sparse_som')
