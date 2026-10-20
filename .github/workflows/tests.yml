@@ -13,6 +13,7 @@ jobs:
   test:
     name: ${{ matrix.os }} / Python ${{ matrix.python }} / ${{ matrix.numpy }}
     runs-on: ${{ matrix.os }}
+    # No macOS (OpenMP, #3) nor Windows (MSVC OpenMP 2.0, #11) until they build.
     strategy:
       fail-fast: false
       matrix:
@@ -23,9 +24,6 @@ jobs:
           - os: ubuntu-latest
             python: "3.12"
             numpy: "numpy<2"
-          - os: windows-latest
-            python: "3.13"
-            numpy: "numpy"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
