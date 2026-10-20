@@ -15,7 +15,7 @@ class SomClassifier:
         :type width: int
         :param dim: SOM nodes nb of dimensions (if None, detected when :class:`fit` called)
         :type dim: int
-        :param \**kwargs: named parameters for the constructor
+        :param \\**kwargs: named parameters for the constructor
         """
         # take any positional arguments to named
         kwargs['h'] = height
@@ -62,7 +62,7 @@ class SomClassifier:
         :type data: :class:`scipy.sparse.csr_matrix`
         :param labels: the labels associated with data
         :type labels: iterable
-        :param \**kwargs: optional parameters for :meth:`train`
+        :param \\**kwargs: optional parameters for :meth:`train`
         """
 
         # set vectors dimensions if they're missing

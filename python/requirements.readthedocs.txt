@@ -1,4 +1,1 @@
-cython
-numpy
-scipy
-sparse-som
+sphinx

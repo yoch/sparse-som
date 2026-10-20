@@ -2,3 +2,8 @@
 /python/build
 /python/doc
 /python/sparse_som/__pycache__
+/python/sparse_som/som.cpp
+/python/sparse_som/*.so
+/python/dist
+/python/*.egg-info
+/python/__pycache__

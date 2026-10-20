@@ -1,5 +1,4 @@
 # distutils: language = c++
-# distutils: sources = lib/bsom.cpp, lib/som.cpp, lib/data.cpp
 # cython: language_level=3, boundscheck=False
 
 cimport cython
@@ -13,14 +12,6 @@ try:
     from sklearn.metrics.pairwise import pairwise_distances
 except ImportError:
     HAS_SKLEARN = False
-
-    def eucdist(codebook, data):
-        dst = -2 * data.dot(codebook.T)
-        dst += (codebook ** 2).sum(axis=1)
-        dst += data.power(2).sum(axis=1)
-        np.clip(dst, 0, None, out=dst)
-        np.sqrt(dst, out=dst)
-        return dst
 else:
     HAS_SKLEARN = True
 
@@ -110,15 +101,23 @@ def _umatrix(som):
     return umat
 
 
-def _activation_map(codebook, data):
-    if not HAS_SKLEARN:
-        return eucdist(codebook, data)
-    shape = codebook.shape
-    codebook.shape = -1, shape[-1]
-    #dst = euclidean_distances(codebook, data)
-    dst = pairwise_distances(codebook, data, metric='euclidean', n_jobs=-1)
-    codebook.shape = shape
+def _eucdist(codebook, data):
+    """Euclidean distances between the rows of a 2D codebook and of a CSR matrix,
+    as a (nodes, samples) array, like pairwise_distances(codebook, data)."""
+    dst = -2 * np.asarray(data.dot(codebook.T)).T
+    dst += (codebook ** 2).sum(axis=1)[:, np.newaxis]
+    dst += np.asarray(data.power(2).sum(axis=1)).ravel()[np.newaxis, :]
+    np.clip(dst, 0, None, out=dst)
+    np.sqrt(dst, out=dst)
     return dst
+
+
+def _activation_map(codebook, data):
+    # a view on the (height, width, dim) codebook, one row per node
+    codebook = codebook.reshape(-1, codebook.shape[-1])
+    if not HAS_SKLEARN:
+        return _eucdist(codebook, data)
+    return pairwise_distances(codebook, data, metric='euclidean', n_jobs=-1)
 
 
 cdef extern from "lib/som.h" namespace "som":

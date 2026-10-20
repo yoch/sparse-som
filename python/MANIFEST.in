@@ -1,3 +1,6 @@
 include README.md
-include sparse_som/lib/data.h
-include sparse_som/lib/som.h
+include pyproject.toml
+include sparse_som/som.pyx
+include sparse_som/lib/*.h
+include sparse_som/lib/*.cpp
+exclude sparse_som/som.cpp

@@ -23,7 +23,8 @@ classical one on very sparse datasets (time complexity depends on non-zero value
 pip install sparse-som
 ```
 
-Building from source requires a C++11 compiler with OpenMP support, plus `numpy` and `scipy`.
+Building from source requires a C++11 compiler with OpenMP support; `pip` installs the build
+requirements (Cython 3, numpy) itself, see `pyproject.toml`.
 
 ## Usage
 
@@ -97,7 +98,9 @@ are in the [project README](https://github.com/yoch/sparse-som#how-to-cite-this-
 ### Cython
 
 #### Compilation
+`sparse_som/som.cpp` is generated from `som.pyx` at build time, and not tracked.
 ```
+pip install "cython>=3.0.11" numpy setuptools
 python setup.py build_ext --inplace
 ```
 
@@ -108,12 +111,14 @@ python setup.py clean
 
 #### Build package
 ```
-python3 setup.py sdist bdist_wheel
+python -m build
 ```
 
 
 ### Build doc
+autodoc needs the compiled package installed (Read the Docs does the same, see `.readthedocs.yaml`).
 ```
+pip install . sphinx
 sphinx-build -b html doc/source doc/build
 ```
 
